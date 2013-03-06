@@ -1,20 +1,22 @@
 #!/usr/bin/python3
 
-import io, itertools, math, pickle, random, subprocess, sys
+import io, itertools, json, math, random, subprocess, sys, time
 from contextlib import closing
 
 import scipy.stats
 
 class Game:
-    def __init__(self):
+    def __init__(self, payoffs):
         self.dimension = 3 # The dimension of the (square) game -- this is
         # hardcoded here and there; I need to change that.
-        self.chances = chance(self.dimension)
-        self.payoffs = payoffs()
+        self.chances = [1/3, 1/3, 1/3]
+        self.payoffs = payoffs
         self.sender, self.receiver = fromlisttomatrix(self.payoffs)
+        self.payofftype = self.payoff_type()
         self.kendallmod = self.aggregate_kendall_mod()
-        print("Modified Kendall tau distance: {}".format(self.kendallmod))
-
+        self.kendallmoddistance = self.aggregate_kendall_mod_distance()
+#        print("Modified Kendall tau distance: {}".format(self.kendallmoddistance))
+#        print("Modified Kendall tau distance: {}".format(self.kendallmod))
 
     def kendall_tau_distance(self, state):
         kendall =  sum([abs(math.floor(preferable(self.sender[state], pair[0], pair[1]) -
@@ -22,6 +24,15 @@ class Game:
             itertools.combinations_with_replacement(range(self.dimension), 2)])
         normalization_coeff = self.dimension * (self.dimension - 1) / 2
         return kendall/normalization_coeff
+
+    def kendall_tau_distance_distances(self, state):
+        normsender = normalize_matrix(self.sender)
+        normreceiver = normalize_matrix(self.receiver)
+        kendall = sum([abs((normsender[state][pair[0]]-normsender[state][pair[1]]) -
+            (normreceiver[state][pair[0]]-normreceiver[state][pair[1]])) for pair in
+            itertools.combinations_with_replacement(range(self.dimension), 2)])
+        #print(kendall)
+        return kendall
 
     def same_best(self):
         bestactsforsender = [setofindexes(acts, max(acts)) for acts in
@@ -41,6 +52,10 @@ class Game:
 
     def aggregate_kendall_mod(self):
         return sum([self.chances[state] * self.kendall_mod(state) for state in
+            range(self.dimension)])
+
+    def aggregate_kendall_mod_distance(self):
+        return sum([self.chances[state] * self.kendall_tau_distance_distances(state) for state in
             range(self.dimension)])
 
     def info_in_equilibria(self):
@@ -198,6 +213,28 @@ class Game:
         print('Average KL distance: {}'.format(averagekbd))
         return(averagekbd)
 
+    def payoff_type(self): # What type is the payoff matrix
+        sendermatrix, receivermatrix = self.sender, self.receiver
+        bestactsforsender = [setofindexes(acts, max(acts)) for acts in
+                sendermatrix]
+        bestactsforreceiver = [setofindexes(acts, max(acts)) for acts in
+                receivermatrix]
+        worstactsforsender = [setofindexes(acts, min(acts)) for acts in
+                sendermatrix]
+        worstactsforreceiver = [setofindexes(acts, min(acts)) for acts in
+                receivermatrix]
+        iterator = range(len(worstactsforsender))
+        bestacts = [len(bestactsforsender[i] & bestactsforreceiver[i]) > 0 for i in
+                iterator] # the intersection of the set of best acts for
+        # sender and receiver is nonzero
+        worstacts = [len(worstactsforsender[i] & worstactsforreceiver[i]) > 0 for i in
+                iterator]
+
+        sameordering = [bestacts[i] and worstacts[i] for i in iterator]
+        onlybestacts = [bestacts[i] and not worstacts[i] for i in iterator]
+        onlyworstacts = [worstacts[i] and not bestacts[i] for i in iterator]
+        return [sum(sameordering), sum(onlybestacts), sum(onlyworstacts)]
+
 def order_indexes(preferences):
     return [i[0] for i in sorted(enumerate(preferences), key=lambda x:x[1])]
 
@@ -232,18 +269,90 @@ def setofindexes(originallist, element):
     return set([i for i in range(len(originallist)) if originallist[i] ==
         element]) # We return sets -- later we are doing intersections
 
+def normalize_matrix(matrix):
+    flatmatrix = [i for i in itertools.chain.from_iterable(matrix)] # what's
+    # the right way to do this?
+    bottom = min(flatmatrix)
+    top = max(flatmatrix)
+    return [[(element - bottom)/(top - bottom) for element in row] for row in matrix]
 
-if __name__ == "__main__":
-    games = []
+def type_code(payofftype):
+    return payofftype[0]*100 + payofftype[1]*10 + payofftype[2]
+
+def main():
+    games = {}
     chances = [1/3, 1/3, 1/3]
-    with open("datapoints", 'w') as datapoints:
-        for i in range(50):
+    timestr = time.strftime("%d%b%H-%M")
+    datapointsname = ''.join(["datapoints", timestr])
+    with open(datapointsname, 'w') as datapoints:
+        for i in range(40):
             print("EXPERIMENT", i)
             print()
-            games.append(Game())
-            games[i].maxinfo = games[i].info_in_equilibria() 
-            datapoints.write('{} {}\n'.format(games[i].kendallmod,
-                games[i].maxinfo))
+            entry = {}
+            game = Game(payoffs())
+            while game.payofftype != [0,0,1]: 
+                game = Game(payoffs())
+            game.maxinfo = game.info_in_equilibria() 
+            datapoints.write('{} {}\n'.format(game.kendallmoddistance,
+                game.maxinfo))
+            entry["sender"] = game.sender
+            entry["receiver"] = game.receiver
+            entry["payoffs"] = game.payoffs
+            entry["kendallmod"] = game.kendallmod
+            entry["maxinfo"] = game.maxinfo
+            games[i] = entry
             print()
-    with open("games", 'wb') as gamefile:
-        pickle.dump(games, gamefile)
+    print(games)
+    gamesname = ''.join(["games", timestr])
+    with open(gamesname, 'w') as gamefile:
+        json.dump(games, gamefile)
+
+def main2():
+    types  = [[i,j,k] for i in range(4) for j in range(4) for k in range(4) if
+            i + j + k <= 3]
+    chances = [1/3, 1/3, 1/3]
+    timestr = time.strftime("%d%b%H-%M")
+    datapointsname = ''.join(["datapoints", timestr])
+    with open(datapointsname, 'w') as datapoints:
+        for payofftype in types:
+            print(payofftype)
+            typecode = payofftype[0]*100 + payofftype[1]*10 + payofftype[2]
+            for i in range(40):
+                print("EXPERIMENT", i)
+                #print()
+                entry = {}
+                game = Game(payoffs())
+                while game.payofftype != payofftype: 
+                    game = Game(payoffs())
+                datapoints.write('{} {}\n'.format(typecode, game.kendallmod))
+                
+def main3():
+    types  = [[i,j,k] for i in range(4) for j in range(4) for k in range(4) if
+            i + j + k <= 3]
+    games = {}
+    chances = [1/3, 1/3, 1/3]
+    timestr = time.strftime("%d%b%H-%M")
+    datapointsname = ''.join(["datapoints", timestr])
+    with open(datapointsname, 'w') as datapoints:
+        for i in range(40):
+            print("EXPERIMENT", i)
+            print()
+            entry = {}
+            game = Game(payoffs())
+            #while game.payofftype != [0,0,1]: 
+            #    game = Game(payoffs())
+            game.maxinfo = game.info_in_equilibria() 
+            datapoints.write('{} {}\n'.format(type_code(game.payofftype),
+                game.maxinfo))
+            entry["sender"] = game.sender
+            entry["receiver"] = game.receiver
+            entry["payoffs"] = game.payoffs
+            entry["kendallmod"] = game.kendallmod
+            entry["maxinfo"] = game.maxinfo
+            entry["type"] = game.payofftype
+            games[i] = entry
+            print()
+    print(games)
+    gamesname = ''.join(["games", timestr])
+    with open(gamesname, 'w') as gamefile:
+        json.dump(games, gamefile)
