@@ -1,4 +1,4 @@
-import commoninterest2 as ci, json, time
+import commoninterest as ci, json, time
 from scipy.stats import scoreatpercentile
 
 def gamepoints(gametype):
