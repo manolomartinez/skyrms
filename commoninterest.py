@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import io, itertools, json, math, random, subprocess, sys, time
-from contextlib import closing
 
 import scipy.stats
 
@@ -14,16 +13,60 @@ class Game:
         self.sender, self.receiver = fromlisttomatrix(self.payoffs)
         self.payofftype = self.payoff_type()
         self.kendallmod = self.aggregate_kendall_mod()
+        self.kendalldistance = round(self. aggregate_kendall_distance(),2)
+        self.minkendallmod = self.min_kendall_mod()
         self.kendallmoddistance = self.aggregate_kendall_mod_distance()
+        self.minkendallmoddistance = self.min_kendall_mod_distance()
+        self.actdev = self.act_deviation3()
+        self.kendallsender, self.kendallreceiver = self.intrakendall()
+#        print("Act deviation: {}".format(self.actdev))
 #        print("Modified Kendall tau distance: {}".format(self.kendallmoddistance))
 #        print("Modified Kendall tau distance: {}".format(self.kendallmod))
+    def intrakendall(self):
+        def points(state1, state2, element1, element2):
+            pairwise = abs(math.floor(preferable(state1, element1, element2) -
+            preferable(state2, element1, element2)))
+            return pairwise 
+        def kendall(state1, state2):
+            return sum([points(state1, state2, pair[0], pair[1]) for pair in 
+                itertools.combinations(range(self.dimension), 2)])
+        skendalls = [kendall(self.sender[pair[0]], self.sender[pair[1]]) for
+            pair in itertools.combinations(range(self.dimension), 2)]
+        rkendalls = [kendall(self.receiver[pair[0]], self.receiver[pair[1]]) for
+            pair in itertools.combinations(range(self.dimension), 2)]
+        return sum(skendalls)/len(skendalls), sum(rkendalls)/len(rkendalls)
+
+        
+
+    def aggregate_kendall_distance(self):
+        return sum([self.chances[state] * self.kendall_tau_distance(state) for state in
+            range(self.dimension)])
 
     def kendall_tau_distance(self, state):
-        kendall =  sum([abs(math.floor(preferable(self.sender[state], pair[0], pair[1]) -
-            preferable(self.receiver[state], pair[0], pair[1]))) for pair in
-            itertools.combinations_with_replacement(range(self.dimension), 2)])
-        normalization_coeff = self.dimension * (self.dimension - 1) / 2
-        return kendall/normalization_coeff
+        def points(sender, receiver, element1, element2):
+            pairwise = abs(math.floor(preferable(sender, element1, element2) -
+            preferable(receiver, element1, element2)))
+            if sender[element1] == max(sender) or sender[element2] == max(sender):
+                weight = 1
+            elif sender[element1] == min(sender) or sender[element2] == min(sender):
+                weight = 1
+            return pairwise * weight
+        kendall =  sum([points(self.sender[state], self.receiver[state],
+            pair[0], pair[1]) for pair in
+            itertools.combinations(range(self.dimension), 2)])
+        return kendall
+
+    def kendall_tau_distance_weighted(self, state):
+        sender = order_indexes(self.sender[state])
+        receiver = order_indexes(self.receiver[state])
+        sender = [boost(sender, element) for element in sender]
+        receiver = [boost(receiver, element) for element in receiver]
+        kendall =  sum([abs((sender[pair[0]]-sender[pair[1]]) - 
+            (receiver[pair[0]]-sender[pair[1]])) 
+            for pair in itertools.combinations(range(self.dimension), 2)])
+        #normalization_coeff = self.dimension * (self.dimension - 1) / 2
+        return kendall
+
 
     def kendall_tau_distance_distances(self, state):
         normsender = normalize_matrix(self.sender)
@@ -53,9 +96,17 @@ class Game:
     def aggregate_kendall_mod(self):
         return sum([self.chances[state] * self.kendall_mod(state) for state in
             range(self.dimension)])
+        
+    def min_kendall_mod(self):
+        return min([self.kendall_mod(state) for state in
+            range(self.dimension)])
 
     def aggregate_kendall_mod_distance(self):
         return sum([self.chances[state] * self.kendall_tau_distance_distances(state) for state in
+            range(self.dimension)])
+
+    def min_kendall_mod_distance(self):
+        return min([self.kendall_tau_distance_distances(state) for state in
             range(self.dimension)])
 
     def info_in_equilibria(self):
@@ -65,7 +116,7 @@ class Game:
         result = calc_eqs.communicate(input = gambitgame)[0]
         equilibria = str(result, "utf-8").split("\n")[:-1]
         infos = self.calculate_info_content(equilibria)
-        return max(infos)
+        return equilibria, max(infos)
         
     def write_efg(self): # This writes the game in the form Gambit
         # expects. 'output' is a file object.
@@ -172,9 +223,9 @@ class Game:
     def calculate_info_content(self, equilibria): # Given Gambit results, calculate in which equilibria do signals carry information
         chance = self.chances
         infos = []
-        print(equilibria)
+        #print(equilibria)
         for line in equilibria:
-            print("Equilibrium", line, end =":\n")
+            #print("Equilibrium", line, end =":\n")
             # The following takes a line such as "NE, 0, 0, 1, 0, 0, 1..." to a list [0, 0, 1, 0, 0, 1...]
             equilibrium = list(map(eval, line.split(sep =",")[1:]))
             averagekbd = self.conditional_probabilities(equilibrium)
@@ -210,7 +261,7 @@ class Game:
             conditional_probability_matrix.append(conditionals4message)
         averagekbd = sum([prob * kbd for prob, kbd in zip(kullbackleibler,
             unconditionals)])
-        print('Average KL distance: {}'.format(averagekbd))
+        #print('Average KL distance: {}'.format(averagekbd))
         return(averagekbd)
 
     def payoff_type(self): # What type is the payoff matrix
@@ -235,6 +286,57 @@ class Game:
         onlyworstacts = [worstacts[i] and not bestacts[i] for i in iterator]
         return [sum(sameordering), sum(onlybestacts), sum(onlyworstacts)]
 
+    def act_deviation(self):
+        normsender = normalize_matrix(self.sender)
+        normreceiver = normalize_matrix(self.receiver)
+        ad = []
+        mean = []
+        for act in range(self.dimension):
+            pairs = [[statesender[act],
+                statereceiver[act]] for statesender, statereceiver in
+                zip(normsender, normreceiver)]
+            ad.append([avg([avg_abs_dev(pair) for pair in pairs]),
+                avg_abs_dev([avg(pair) for pair in pairs])])
+        #return avg([row[0] for row in ad])-avg([row[1] for row in ad])
+        return ad
+
+    def act_deviation2(self): # A simpler version
+        osender = [order_list(row) for row in self.sender]
+        oreceiver =[order_list(row) for row in self.receiver] 
+        #print(osender, oreceiver)
+        ad = []
+        mean = []
+        for act in range(self.dimension):
+            pairs = [[statesender[act],
+                statereceiver[act]] for statesender, statereceiver in
+                zip(osender, oreceiver)]
+            ad.append([avg([abs(pair[0]-pair[1]) for pair in pairs]),
+                sum([avg(pair) for pair in pairs])])
+        #return avg([row[0] for row in ad])-avg([row[1] for row in ad])
+        return ad
+
+    def act_deviation3(self): # A simpler version
+        osender = normalize_matrix(self.sender)
+        oreceiver = normalize_matrix(self.receiver)
+        #print(osender, oreceiver)
+        ad = []
+        mean = []
+        for act in range(self.dimension):
+            pairs = [[statesender[act],
+                statereceiver[act]] for statesender, statereceiver in
+                zip(osender, oreceiver)]
+            ad.append([avg([abs(pair[0]-pair[1]) for pair in pairs]),
+                sum([avg(pair) for pair in pairs])])
+        #return avg([row[0] for row in ad])-avg([row[1] for row in ad])
+        return ad
+    
+def boost(list, element):
+    if element == max(list):
+        return element * 2
+    else:
+        return element
+
+
 def order_indexes(preferences):
     return [i[0] for i in sorted(enumerate(preferences), key=lambda x:x[1])]
 
@@ -242,6 +344,12 @@ def chance(dimension): # State probabilities
     randomlist = [random.random() for i in range(dimension)]
     total = sum(randomlist)
     return [element/total for element in randomlist]
+
+def avg(alist):
+    return round(sum(alist)/len(alist),2)
+
+def avg_abs_dev(alist):
+    return sum([abs(element - avg(alist)) for element in alist])/len(alist)
 
 def payoffs(): # The payoff matrix, as a list
     return [random.randrange(0,100) for x in range(18)]
@@ -265,6 +373,7 @@ def preferable(ranking, element1, element2): # returns 0 if element1 is
     if index2 < index1:
         return 1
 
+
 def setofindexes(originallist, element):
     return set([i for i in range(len(originallist)) if originallist[i] ==
         element]) # We return sets -- later we are doing intersections
@@ -279,6 +388,10 @@ def normalize_matrix(matrix):
 def type_code(payofftype):
     return payofftype[0]*100 + payofftype[1]*10 + payofftype[2]
 
+def order_list(alist):
+    olist = sorted(alist, reverse=True)
+    return [olist.index(element) for element in alist]
+
 def main():
     games = {}
     chances = [1/3, 1/3, 1/3]
@@ -287,13 +400,13 @@ def main():
     with open(datapointsname, 'w') as datapoints:
         for i in range(40):
             print("EXPERIMENT", i)
-            print()
+            #print()
             entry = {}
             game = Game(payoffs())
-            while game.payofftype != [0,0,1]: 
-                game = Game(payoffs())
+            #while game.payofftype != [0,3,0]: 
+            #    game = Game(payoffs())
             game.maxinfo = game.info_in_equilibria() 
-            datapoints.write('{} {}\n'.format(game.kendallmoddistance,
+            datapoints.write('{} {}\n'.format(game.actdev,
                 game.maxinfo))
             entry["sender"] = game.sender
             entry["receiver"] = game.receiver
@@ -301,8 +414,8 @@ def main():
             entry["kendallmod"] = game.kendallmod
             entry["maxinfo"] = game.maxinfo
             games[i] = entry
-            print()
-    print(games)
+            #print()
+    #print(games)
     gamesname = ''.join(["games", timestr])
     with open(gamesname, 'w') as gamefile:
         json.dump(games, gamefile)
@@ -356,3 +469,51 @@ def main3():
     gamesname = ''.join(["games", timestr])
     with open(gamesname, 'w') as gamefile:
         json.dump(games, gamefile)
+
+def manygames():
+    games = {}
+    chances = [1/3, 1/3, 1/3]
+    timestr = time.strftime("%d%b%H-%M")
+    types  = [[i,j,k] for i in range(4) for j in range(4) for k in range(4) if
+            i + j + k <= 3]
+    for gametype in types:
+        print("Type: {}".format(gametype))
+        for i in range(100):
+            print("EXPERIMENT", i)
+            #print()
+            entry = {}
+            game = Game(payoffs())
+            while game.payofftype != gametype: 
+                game = Game(payoffs())
+            game.equilibria, game.maxinfo = game.info_in_equilibria() 
+            entry["equilibria"] = str(game.equilibria)
+            entry["sender"] = game.sender
+            entry["receiver"] = game.receiver
+            entry["kendallmod"] = game.kendallmod
+            entry["maxinfo"] = game.maxinfo
+            games[str(game.payoffs)] = entry
+        gamesname = ''.join(["type", ''.join([str(number) for number in
+            gametype]), timestr])
+        with open(gamesname, 'w') as gamefile:
+            json.dump(games, gamefile)
+
+
+def manymanygames():
+    games = {}
+    chances = [1/3, 1/3, 1/3]
+    for j in range(100):
+        timestr = time.strftime("%d%b%H-%M")
+        for i in range(200):
+            print("EXPERIMENT", j,i)
+            entry = {}
+            game = Game(payoffs())
+            game.equilibria, game.maxinfo = game.info_in_equilibria() 
+            entry["equilibria"] = str(game.equilibria)
+            entry["sender"] = game.sender
+            entry["receiver"] = game.receiver
+            entry["kendallmod"] = game.kendallmod
+            entry["maxinfo"] = game.maxinfo
+            games[str(game.payoffs)] = entry
+        gamesname = ''.join(["manygames",str(j),str(i),"_",timestr])
+        with open(gamesname, 'w') as gamefile:
+            json.dump(games, gamefile)
