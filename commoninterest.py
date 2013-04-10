@@ -6,17 +6,15 @@ import scipy.stats
 
 class Game:
     def __init__(self, payoffs):
-        self.dimension = 3 # The dimension of the (square) game -- this is
-        # hardcoded here and there; I need to change that.
-        self.chances = [1/3, 1/3, 1/3]
+        self.dimension = int(math.sqrt(len(payoffs)/2)) # The dimension of the (square) game 
+        print(self.dimension)
+        self.chances = [1/self.dimension for i in range(self.dimension)]
         self.payoffs = payoffs
-        self.sender, self.receiver = fromlisttomatrix(self.payoffs)
+        self.sender, self.receiver = fromlisttomatrix(self.payoffs,
+                self.dimension)
         self.kendalldistance = round(self. aggregate_kendall_distance(),2)
         self.kendalldistances = self.aggregate_kendall_distance_distances()
         self.kendallsender, self.kendallreceiver = self.intrakendall()
-#        print("Act deviation: {}".format(self.actdev))
-#        print("Modified Kendall tau distance: {}".format(self.kendallmoddistance))
-#        print("Modified Kendall tau distance: {}".format(self.kendallmod))
 
     def same_best(self):
         bestactsforsender = [setofindexes(acts, max(acts)) for acts in
@@ -50,11 +48,7 @@ class Game:
         def points(sender, receiver, element1, element2):
             pairwise = math.floor(abs(preferable(sender, element1, element2) -
             preferable(receiver, element1, element2)))
-            if sender[element1] == max(sender) or sender[element2] == max(sender):
-                weight = 1
-            elif sender[element1] == min(sender) or sender[element2] == min(sender):
-                weight = 1
-            return pairwise * weight
+            return pairwise 
         kendall =  sum([points(self.sender[state], self.receiver[state],
             pair[0], pair[1]) for pair in
             itertools.combinations(range(self.dimension), 2)])
@@ -80,17 +74,27 @@ class Game:
 
     def info_in_equilibria(self):
         gambitgame = bytes(self.write_efg(), "utf-8")
-        calc_eqs = subprocess.Popen(['gambit-lcp'], stdin = subprocess.PIPE,
+        calc_eqs = subprocess.Popen(['gambit-lcp', '-d', '3'], stdin = subprocess.PIPE,
                 stdout = subprocess.PIPE)
         result = calc_eqs.communicate(input = gambitgame)[0]
         equilibria = str(result, "utf-8").split("\n")[:-1]
         sinfos, rinfos, jinfos = self.calculate_info_content(equilibria)
         return equilibria, max(sinfos), max(rinfos), max(jinfos)
+
+    def payoffs_for_efg(self):
+        payoffs = [[','.join([str(sact), str(ract)]) for sact, ract in
+            zip(sstate, rstate)] for sstate, rstate in zip(self.sender,
+                self.receiver)]
+        return payoffs
+
+    def actually_write_efg(self, filename):
+        with open(filename, 'w') as output:
+            output.write(self.write_efg())
         
-    def write_efg(self): # This writes the game in the form Gambit
-        # expects. 'output' is a file object.
-        chance = self.chances
-        V = self.payoffs
+    def write_efg(self):
+        dimension = self.dimension
+        chance = [str(i) for i in self.chances]
+        players = self.payoffs_for_efg()
         filelist = []
         filelist.append(r'EFG 2 R "Untitled Extensive Game" { "Player 1" "Player 2" }')
         filelist.append("\n")
@@ -98,88 +102,41 @@ class Game:
         filelist.append("\n")
         filelist.append('')
         filelist.append("\n")
-        filelist.append(r'c "" 1 "" {{ "1" {0} "2" {1} "3" {2} }} 0'.format(chance[0], chance[1], chance[2]))
-        filelist.append("\n")
-        filelist.append(r'p "" 1 1 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r'p "" 2 1 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r't "" 1 "" {{ {} , {} }}'.format(V[0],V[1]))
-        filelist.append("\n")
-        filelist.append(r't "" 2 "" {{ {}, {} }}'.format(V[2], V[3]))
-        filelist.append("\n")
-        filelist.append(r't "" 3 "" {{ {}, {} }}'.format(V[4], V[5]))
-        filelist.append("\n")
-        filelist.append(r'p "" 2 2 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r't "" 4 "" {{ {}, {} }}'.format(V[0],V[1]))
-        filelist.append("\n")
-        filelist.append(r't "" 5 "" {{ {}, {} }}'.format(V[2], V[3]))
-        filelist.append("\n")
-        filelist.append(r't "" 6 "" {{ {}, {} }}'.format(V[4], V[5]))
-        filelist.append("\n")
-        filelist.append(r'p "" 2 3 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r't "" 7 "" {{ {}, {} }}'.format(V[0],V[1]))
-        filelist.append("\n")
-        filelist.append(r't "" 8 "" {{ {}, {} }}'.format(V[2], V[3]))
-        filelist.append("\n")
-        filelist.append(r't "" 9 "" {{ {}, {} }}'.format(V[4], V[5]))
-        filelist.append("\n")
-        filelist.append(r'p "" 1 2 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r'p "" 2 1 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r't "" 10 "" {{ {}, {} }}'.format(V[6], V[7]))
-        filelist.append("\n")
-        filelist.append(r't "" 11 "" {{ {}, {} }}'.format(V[8], V[9]))
-        filelist.append("\n")
-        filelist.append(r't "" 12 "" {{ {}, {} }}'.format(V[10], V[11]))
-        filelist.append("\n")
-        filelist.append(r'p "" 2 2 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r't "" 13 "" {{ {}, {} }}'.format(V[6], V[7]))
-        filelist.append("\n")
-        filelist.append(r't "" 14 "" {{ {}, {} }}'.format(V[8], V[9]))
-        filelist.append("\n")
-        filelist.append(r't "" 15 "" {{ {}, {} }}'.format(V[10], V[11]))
-        filelist.append("\n")
-        filelist.append(r'p "" 2 3 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r't "" 16 "" {{ {}, {} }}'.format(V[6], V[7]))
-        filelist.append("\n")
-        filelist.append(r't "" 17 "" {{ {}, {} }}'.format(V[8], V[9]))
-        filelist.append("\n")
-        filelist.append(r't "" 18 "" {{ {}, {} }}'.format(V[10], V[11]))
-        filelist.append("\n")
-        filelist.append(r'p "" 1 3 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r'p "" 2 1 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r't "" 19 "" {{ {}, {} }}'.format(V[12], V[13]))
-        filelist.append("\n")
-        filelist.append(r't "" 20 "" {{ {}, {} }}'.format(V[14], V[15]))
-        filelist.append("\n")
-        filelist.append(r't "" 21 "" {{ {}, {} }}'.format(V[16], V[17]))
-        filelist.append("\n")
-        filelist.append(r'p "" 2 2 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r't "" 22 "" {{ {}, {} }}'.format(V[12], V[13]))
-        filelist.append("\n")
-        filelist.append(r't "" 23 "" {{ {}, {} }}'.format(V[14], V[15]))
-        filelist.append("\n")
-        filelist.append(r't "" 24 "" {{ {}, {} }}'.format(V[16], V[17]))
-        filelist.append("\n")
-        filelist.append(r'p "" 2 3 "" { "1" "2" "3" } 0')
-        filelist.append("\n")
-        filelist.append(r't "" 25 "" {{ {}, {} }}'.format(V[12], V[13]))
-        filelist.append("\n")
-        filelist.append(r't "" 26 "" {{ {}, {} }}'.format(V[14], V[15]))
-        filelist.append("\n")
-        filelist.append(r't "" 27 "" {{ {}, {} }}'.format(V[16], V[17]))
-        filelist.append("\n")
-        filelist.append(r'</efgfile>')
-        filelist.append("\n")
+
+        # The Chance Player line
+        line = "c \"\" 1 \"\" {"
+        for element in range(len(chance)):
+            line = line + " \"" + str(element + 1) + "\" " + str(chance[element])
+        line = line + " } 0\n"
+        filelist.append(line)
+
+        # A Couple of Useful Strings
+        statesstr = "{ "
+        for states in range(dimension):
+            statesstr = statesstr + "\"" + str(states + 1) + "\" "
+        statesstr = statesstr + "}"
+        actsstr = "{ "
+        for acts in range(len(players[0])):
+            actsstr = actsstr + "\"" + str(acts + 1) + "\" "
+        actsstr = actsstr + "}"
+        messagesstr = "{ "
+        for i in range(dimension):
+            messagesstr = messagesstr + "\"" + str(i + 1) + "\" "
+        messagesstr = messagesstr + "}"
+
+        # The Players lines
+        index = 1
+        for states in range(dimension):
+            line = "p \"\" 1 " + str(states + 1) + " \"\" " + messagesstr + " 0\n"
+            filelist.append(line)
+            for i in range(dimension):
+                line = "p \"\" 2 " + str(i + 1) + " \"\" " + messagesstr + " 0\n"
+                filelist.append(line)
+                for acts in range(len(players[states])):
+                    line = "t \"\" " + str(index) + " \"\" { " + players[states][acts] + " }\n"
+                    filelist.append(line)
+                    index = index + 1
+        filelist.append("</efgfile>\n</game>\n</gambit:document>")
         stringinput = ''.join(filelist)
         return stringinput
 
@@ -211,8 +168,9 @@ class Game:
         #states of acts
         # Note the resulting matrices have the form: [[P(S1|M1), P(S2|M1), P(S3|M1)], [P(S1|M2), P(S2|M2), P(S3|M2)]...]
         chance = self.chances
-        equilibriumsender = equilibrium[:9]
-        equilibriumreceiver = equilibrium[9:]
+        half = int(len(self.payoffs)/2)
+        equilibriumsender = equilibrium[:half]
+        equilibriumreceiver = equilibrium[half:]
 
         ### First, the information that messages carry about states ###
 
@@ -240,8 +198,8 @@ class Game:
                 unconditionalsmessages[message] for state in
                 range(self.dimension)] for message in range(self.dimension)]
 
-        #print("eqbsender", equilibriumsender)
-        #print("eqbreceiver", equilibriumreceiver)
+        print("eqbsender", equilibriumsender)
+        print("eqbreceiver", equilibriumreceiver)
 
         #print("jointprobSM",jointprobSM)
 
@@ -250,10 +208,10 @@ class Game:
                     unconditionalsmessages[message]) for state in
                 range(self.dimension) for message in range(self.dimension)])
 
-        #print("MutualInfo SM", mutualinfoSM)
+        print("MutualInfo SM", mutualinfoSM)
 
         #print('Average KL distance: {}'.format(averagekldsender))
-        #print("Uncondmessages", unconditionalsmessages)
+        print("Uncondmessages", unconditionalsmessages)
 
         ### Then, the information that messages carry about acts ###
 
@@ -275,11 +233,11 @@ class Game:
                 for act in range(self.dimension):
                     conditional = unconditionalsmessages[message] * equilibriumreceiver[self.dimension * message + act] / unconditionalsmessages[message]
                     conditionals4act.append(conditional)
-                    #print("act: {}, message: {}, conditional: {}".format(act,
-                        #message, conditional))
+                    print("act: {}, message: {}, conditional: {}".format(act,
+                        message, conditional))
             else:
-                conditionals4act=[0,0,0]
-            #print("Uncondacts", unconditionalsacts)
+                conditionals4act=[0 for i in range(self.dimension)]
+            print("Uncondacts", unconditionalsacts)
             #print("Cond4acts", conditional)
 
             kld = sum([safe_kld_coefficient(conditional, unconditional) for
@@ -305,12 +263,12 @@ class Game:
                     unconditionalsmessages[message]) for act in
                 range(self.dimension) for message in range(self.dimension)])
 
-        #print("MutualInfo AM", mutualinfoAM)
+        print("MutualInfo AM", mutualinfoAM)
 
         ### Finally, the info that acts carry about states
 
-        stateconditionalonact = [[safe_div(sum([equilibriumsender[3 * state + message] *
-                equilibriumreceiver[3 * message + act] *
+        stateconditionalonact = [[safe_div(sum([equilibriumsender[self.dimension * state + message] *
+                equilibriumreceiver[self.dimension * message + act] *
                 self.chances[state] for message in
                     range(self.dimension)]) , unconditionalsacts[act])
                         for state in range(self.dimension)] for act in
@@ -330,7 +288,8 @@ class Game:
         #print("eqbsender", equilibriumsender)
         #print("eqbreceiver", equilibriumreceiver)
 
-        #print("jointprobSA",jointprobSA)
+        print("jointprobSA",jointprobSA)
+        print("unconditionalsacts",unconditionalsacts)
         #print("unconditionalsacts", unconditionalsacts)
         #print("chances", self.chances)
 
@@ -338,7 +297,7 @@ class Game:
             safe_log(jointprobSA[act][state], unconditionalsacts[act] *
                 self.chances[state]) for act in range(self.dimension) for state in range(self.dimension)])
 
-        #print("MutualInfo SA", mutualinfoSA)
+        print("MutualInfo SA", mutualinfoSA)
 
 
         return(mutualinfoSM, mutualinfoAM, mutualinfoSA)
@@ -379,15 +338,17 @@ def avg(alist):
 def avg_abs_dev(alist):
     return sum([abs(element - avg(alist)) for element in alist])/len(alist)
 
-def payoffs(): # The payoff matrix, as a list
-    return [random.randrange(0,100) for x in range(18)]
+def payoffs(dimension): # The payoff matrix, as a list
+    return [random.randrange(10) for x in range(dimension*dimension*2)]
 
-def fromlisttomatrix(payoff): # Takes a list of intertwined sender and receiver
+def fromlisttomatrix(payoff, dimension): # Takes a list of intertwined sender and receiver
     # payoffs (what payoffs() outputs) and outputs two lists of lists.
-    sender = [payoff[i] for i in range(0,18,2)]
-    sendermatrix = [sender[0:3],sender[3:6],sender[6:9]]
-    receiver = [payoff[i] for i in range(1,18,2)]
-    receivermatrix = [receiver[0:3],receiver[3:6],receiver[6:9]]
+    sender = [payoff[i] for i in range(0,len(payoff),2)]
+    sendermatrix = [sender[i:i + dimension] for i in range(0, len(sender),
+        dimension)]
+    receiver = [payoff[i] for i in range(1,len(payoff),2)]
+    receivermatrix = [receiver[i:i+dimension] for i in range(0, len(receiver),
+        dimension)]
     return sendermatrix, receivermatrix
 
 def preferable(ranking, element1, element2): # returns 0 if element1 is
