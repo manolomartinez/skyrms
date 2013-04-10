@@ -12,6 +12,7 @@ class Game:
         self.payoffs = payoffs
         self.sender, self.receiver = fromlisttomatrix(self.payoffs)
         self.kendalldistance = round(self. aggregate_kendall_distance(),2)
+        self.kendalldistances = self.aggregate_kendall_distance_distances()
         self.kendallsender, self.kendallreceiver = self.intrakendall()
 #        print("Act deviation: {}".format(self.actdev))
 #        print("Modified Kendall tau distance: {}".format(self.kendallmoddistance))
@@ -59,9 +60,27 @@ class Game:
             itertools.combinations(range(self.dimension), 2)])
         return kendall
 
+    def aggregate_kendall_distance_distances(self):
+        return sum([self.chances[state] * self.kendall_tau_distance_distances(state) for state in
+            range(self.dimension)])
+
+    def kendall_tau_distance_distances(self, state):
+        normsender = normalize_vector(self.sender[state])
+        normreceiver = normalize_vector(self.receiver[state])
+        avg = [(normsender[state] + normreceiver[state])/2 for state in
+                range(self.dimension)]
+        distance = sum([abs(avg[state] - 0.5) for state in
+            range(self.dimension)])
+        #print(kendall)
+        if distance > 1:
+            return 1
+        else:
+            return distance
+
+
     def info_in_equilibria(self):
         gambitgame = bytes(self.write_efg(), "utf-8")
-        calc_eqs = subprocess.Popen(['gambit-lcp', '-d', '3'], stdin = subprocess.PIPE,
+        calc_eqs = subprocess.Popen(['gambit-lcp'], stdin = subprocess.PIPE,
                 stdout = subprocess.PIPE)
         result = calc_eqs.communicate(input = gambitgame)[0]
         equilibria = str(result, "utf-8").split("\n")[:-1]
@@ -166,7 +185,7 @@ class Game:
 
     def calculate_Nash_eqs(self, inputfile, outputfile): # calls Gambit and
         #stores the resulting equilibria
-        proc = subprocess.Popen(["gambit-lcp"], stdin = inputfile, stdout =
+        proc = subprocess.Popen(["gambit-lcp", "-d", "3"], stdin = inputfile, stdout =
                 outputfile)
         return proc
 
@@ -386,6 +405,15 @@ def setofindexes(originallist, element):
     return set([i for i in range(len(originallist)) if originallist[i] ==
         element]) # We return sets -- later we are doing intersections
 
+def normalize_vector(vector):
+    bottom = min(vector)
+    top = max(vector)
+    if top != bottom:
+        normalized = [(element - bottom)/(top - bottom) for element in vector]
+    else:
+        normalized  = [0.5 for i in range(len(vector))]
+    return normalized
+
 def normalize_matrix(matrix):
     flatmatrix = [i for i in itertools.chain.from_iterable(matrix)] # what's
     # the right way to do this?
@@ -476,30 +504,38 @@ def main3():
         json.dump(games, gamefile)
 
 def manygames():
-    games = {}
+    possible_intrakendalls = [1.3333333333333333, 0.6666666666666666, 2.0,
+            1.6666666666666667, 0.0, 0.3333333333333333, 1.0]
+    possible_kendalls = [2.0, 1.33, 1.67, 0.67, 1.0, 2.67, 0.33, 2.33, 0.0,
+            3.0]
+    gamessender = {}
+    gamesreceiver = {}
     chances = [1/3, 1/3, 1/3]
     timestr = time.strftime("%d%b%H-%M")
-    kendalls  = [2.00]
-    for gametype in kendalls:
-        print("Type: {}".format(gametype))
-        for i in range(2000):
+    for duo in itertools.product(possible_kendalls, possible_intrakendalls):
+        print("Type: {}".format(duo))
+        for i in range(1500):
             print("EXPERIMENT", i)
             #print()
             entry = {}
-            game = Game(payoffs())
-            while round(game.kendalldistance, 2) != gametype: 
-                game = Game(payoffs())
-            game.equilibria, game.maxsinfo, game.maxrinfo = game.info_in_equilibria() 
-            entry["equilibria"] = str(game.equilibria)
-            entry["sender"] = game.sender
-            entry["receiver"] = game.receiver
-            entry["kendallmod"] = game.kendallmod
-            entry["maxsinfo"] = game.maxsinfo
-            entry["maxrinfo"] = game.maxrinfo
-            games[str(game.payoffs)] = entry
-        gamesname = ''.join(["type", '',str(gametype), timestr])
+            gamesender =  Game(payoffs())
+            while gamesender.kendalldistance != duo[0] or gamesender.kendallsender != duo[1]:
+                gamesender = Game(payoffs())
+            gamereceiver = Game(payoffs())
+            while gamereceiver.kendalldistance != duo[0] or gamereceiver.kendallreceiver != duo[1]:
+                gamereceiver = Game(payoffs())
+            print(gamesender.kendalldistance, gamesender.kendallsender)
+            print(gamereceiver.kendalldistance, gamereceiver.kendallreceiver)
+            gamesender.equilibria, b, c, d = gamesender.info_in_equilibria() 
+            gamereceiver.equilibria, b, c, d = gamereceiver.info_in_equilibria() 
+            gamessender[str(gamesender.payoffs)] = gamesender.equilibria
+            gamesreceiver[str(gamereceiver.payoffs)] = gamereceiver.equilibria
+        gamesname = ''.join(["boostintrasender", str(duo), timestr])
         with open(gamesname, 'w') as gamefile:
-            json.dump(games, gamefile)
+            json.dump(gamessender, gamefile)
+        gamesname = ''.join(["boostintrareceiver", str(duo), timestr])
+        with open(gamesname, 'w') as gamefile:
+            json.dump(gamesreceiver, gamefile)
 
 
 def manymanygames():
