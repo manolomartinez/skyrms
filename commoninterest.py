@@ -339,7 +339,7 @@ def avg_abs_dev(alist):
     return sum([abs(element - avg(alist)) for element in alist])/len(alist)
 
 def payoffs(dimension): # The payoff matrix, as a list
-    return [random.randrange(10) for x in range(dimension*dimension*2)]
+    return [random.randrange(100) for x in range(dimension*dimension*2)]
 
 def fromlisttomatrix(payoff, dimension): # Takes a list of intertwined sender and receiver
     # payoffs (what payoffs() outputs) and outputs two lists of lists.
@@ -385,84 +385,6 @@ def normalize_matrix(matrix):
 def order_list(alist):
     olist = sorted(alist, reverse=True)
     return [olist.index(element) for element in alist]
-
-def main():
-    games = {}
-    timestr = time.strftime("%d%b%H-%M")
-    counter = 0
-    while counter < 10:
-        #print(counter)
-        #print()
-        entry = {}
-        game = Game(payoffs())
-        entry["kendall"] = game.kendalldistance
-        if 2 < game.kendalldistance: 
-        #while game.payofftype != [0,3,0]: 
-        #    game = Game(payoffs())
-            game.maxinfo = game.info_in_equilibria() 
-            if game.maxinfo[1] > 0:
-                entry["sender"] = game.sender
-                entry["receiver"] = game.receiver
-                entry["payoffs"] = game.payoffs
-                entry["maxinfo"] = game.maxinfo
-                games[counter] = entry
-                counter += 1
-        #print()
-#print(games)
-    gamesname = ''.join(["nugget", timestr])
-    with open(gamesname, 'w') as gamefile:
-        json.dump(games, gamefile)
-
-def main2():
-    types  = [[i,j,k] for i in range(4) for j in range(4) for k in range(4) if
-            i + j + k <= 3]
-    chances = [1/3, 1/3, 1/3]
-    timestr = time.strftime("%d%b%H-%M")
-    datapointsname = ''.join(["datapoints", timestr])
-    with open(datapointsname, 'w') as datapoints:
-        for payofftype in types:
-            #print(payofftype)
-            typecode = payofftype[0]*100 + payofftype[1]*10 + payofftype[2]
-            for i in range(40):
-                print("EXPERIMENT", i)
-                #print()
-                entry = {}
-                game = Game(payoffs())
-                while game.payofftype != payofftype: 
-                    game = Game(payoffs())
-                datapoints.write('{} {}\n'.format(typecode, game.kendallmod))
-                
-def main3():
-    types  = [[i,j,k] for i in range(4) for j in range(4) for k in range(4) if
-            i + j + k <= 3]
-    games = {}
-    chances = [1/3, 1/3, 1/3]
-    timestr = time.strftime("%d%b%H-%M")
-    datapointsname = ''.join(["datapoints", timestr])
-    with open(datapointsname, 'w') as datapoints:
-        maxinfo = 0
-        while maxinfo == 0:
-            print("EXPERIMENT", i)
-            print()
-            entry = {}
-            game = Game(payoffs())
-            while game.payofftype != [0,0,0]: 
-                game = Game(payoffs())
-            game.maxinfo = game.info_in_equilibria() 
-            datapoints.write('{} {}\n'.format(type_code(game.payofftype),
-                game.maxinfo))
-            entry["sender"] = game.sender
-            entry["receiver"] = game.receiver
-            entry["payoffs"] = game.payoffs
-            entry["kendallmod"] = game.kendallmod
-            entry["maxinfo"] = game.maxinfo
-            entry["type"] = game.payofftype
-            games[i] = entry
-            maxinfo = game.maxinfo
-            print()
-    gamesname = ''.join(["games", timestr])
-    with open(gamesname, 'w') as gamefile:
-        json.dump(games, gamefile)
 
 def manygames():
     possible_intrakendalls = [1.3333333333333333, 0.6666666666666666, 2.0,
