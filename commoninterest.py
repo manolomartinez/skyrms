@@ -4,27 +4,51 @@ import io, itertools, json, math, random, subprocess, sys, time
 
 import scipy.stats
 
+
 class Game:
     def __init__(self, payoffs):
-        self.dimension = int(math.sqrt(len(payoffs)/2)) # The dimension of the (square) game 
-        print(self.dimension)
+        self.dimension = int(math.sqrt(len(payoffs)/2))
+        # The dimension of the (square) game
         self.chances = [1/self.dimension for i in range(self.dimension)]
         self.payoffs = payoffs
-        self.sender, self.receiver = fromlisttomatrix(self.payoffs,
-                self.dimension)
-        self.kendalldistance = round(self. aggregate_kendall_distance(),2)
+        self.sender, self.receiver = fromlisttomatrix(
+            self.payoffs, self.dimension)
+        self.cipeter = self.aggregate_ci_peter()
+        self.kendalldistance = round(self. aggregate_kendall_distance(), 2)
         self.kendalldistances = self.aggregate_kendall_distance_distances()
         self.kendallsender, self.kendallreceiver = self.intrakendall()
+        self.petersender, self.peterreceiver = self.intrakendallpeter()
 
     def same_best(self):
-        bestactsforsender = [setofindexes(acts, max(acts)) for acts in
-                self.sender]
-        bestactsforreceiver = [setofindexes(acts, max(acts)) for acts in
-                self.receiver]
-        samebest = [sender & receiver for sender, receiver in
-                zip(bestactsforsender, bestactsforreceiver)]
+        bestactsforsender = [
+            setofindexes(acts, max(acts)) for acts in self.sender]
+        bestactsforreceiver = [
+            setofindexes(acts, max(acts)) for acts in self.receiver]
+        samebest = [
+            sender & receiver for sender, receiver in
+            zip(bestactsforsender, bestactsforreceiver)]
         return samebest
 
+    def intrakendallpeter(self):
+        def points(state1, state2, element1, element2):
+            pairwise = math.floor(
+                abs(preferable(state1, element1, element2) -
+                preferable(state2, element1, element2)))
+            return pairwise
+
+        def kendall(state1, state2):
+            state1plusmean = state1 + [sum(state1)/len(state1)]
+            state2plusmean = state2 + [sum(state2)/len(state2)]
+            return sum(
+                [points(
+                    state1plusmean, state2plusmean, pair[0], pair[1])
+                    for pair in itertools.combinations(
+                        range(self.dimension + 1), 2)])
+        skendalls = [kendall(self.sender[pair[0]], self.sender[pair[1]]) for
+            pair in itertools.combinations(range(self.dimension), 2)]
+        rkendalls = [kendall(self.receiver[pair[0]], self.receiver[pair[1]]) for
+            pair in itertools.combinations(range(self.dimension), 2)]
+        return sum(skendalls)/len(skendalls), sum(rkendalls)/len(rkendalls)
 
     def intrakendall(self):
         def points(state1, state2, element1, element2):
@@ -54,6 +78,26 @@ class Game:
             itertools.combinations(range(self.dimension), 2)])
         return kendall
 
+    def aggregate_ci_peter(self):
+        return sum([self.chances[state] * self.common_interest_peter(state) for
+            state in range(self.dimension)])
+        #return [self.common_interest_peter(state) for state in
+                #range(self.dimension)]
+
+    def common_interest_peter(self, state):
+        senderplusmean = self.sender[state] + [sum(self.sender[state])/len(self.sender[state])]
+        receiverplusmean = self.receiver[state] + [sum(self.receiver[state])/len(self.receiver[state])]
+        #print(senderplusmean, receiverplusmean)
+        def points(sender, receiver, element1, element2):
+            pairwise = math.floor(abs(preferable(sender, element1, element2) -
+            preferable(receiver, element1, element2)))
+            return pairwise 
+        kendall =  sum([points(senderplusmean, receiverplusmean,
+            pair[0], pair[1]) for pair in
+            itertools.combinations(range(self.dimension + 1), 2)])
+        return kendall
+
+
     def aggregate_kendall_distance_distances(self):
         return sum([self.chances[state] * self.kendall_tau_distance_distances(state) for state in
             range(self.dimension)])
@@ -75,6 +119,7 @@ class Game:
     def info_in_equilibria(self):
         gambitgame = bytes(self.write_efg(), "utf-8")
         calc_eqs = subprocess.Popen(['gambit-lcp', '-d', '3'], stdin = subprocess.PIPE,
+        #calc_eqs = subprocess.Popen(['gambit-lcp'], stdin = subprocess.PIPE,
                 stdout = subprocess.PIPE)
         result = calc_eqs.communicate(input = gambitgame)[0]
         equilibria = str(result, "utf-8").split("\n")[:-1]
@@ -171,6 +216,8 @@ class Game:
         half = int(len(self.payoffs)/2)
         equilibriumsender = equilibrium[:half]
         equilibriumreceiver = equilibrium[half:]
+        #print()
+        #print("*******************************")
 
         ### First, the information that messages carry about states ###
 
@@ -198,8 +245,8 @@ class Game:
                 unconditionalsmessages[message] for state in
                 range(self.dimension)] for message in range(self.dimension)]
 
-        print("eqbsender", equilibriumsender)
-        print("eqbreceiver", equilibriumreceiver)
+        #print("eqbsender", equilibriumsender)
+        #print("eqbreceiver", equilibriumreceiver)
 
         #print("jointprobSM",jointprobSM)
 
@@ -208,10 +255,10 @@ class Game:
                     unconditionalsmessages[message]) for state in
                 range(self.dimension) for message in range(self.dimension)])
 
-        print("MutualInfo SM", mutualinfoSM)
+        #print("MutualInfo SM", mutualinfoSM)
 
         #print('Average KL distance: {}'.format(averagekldsender))
-        print("Uncondmessages", unconditionalsmessages)
+        #print("Uncondmessages", unconditionalsmessages)
 
         ### Then, the information that messages carry about acts ###
 
@@ -233,12 +280,12 @@ class Game:
                 for act in range(self.dimension):
                     conditional = unconditionalsmessages[message] * equilibriumreceiver[self.dimension * message + act] / unconditionalsmessages[message]
                     conditionals4act.append(conditional)
-                    print("act: {}, message: {}, conditional: {}".format(act,
-                        message, conditional))
+                    #print("act: {}, message: {}, conditional: {}".format(act,
+                        #message, conditional))
             else:
                 conditionals4act=[0 for i in range(self.dimension)]
-            print("Uncondacts", unconditionalsacts)
-            #print("Cond4acts", conditional)
+            #print("Uncondacts", unconditionalsacts)
+            ##print("Cond4acts", conditional)
 
             kld = sum([safe_kld_coefficient(conditional, unconditional) for
                 conditional, unconditional in zip(conditionals4act,
@@ -263,7 +310,7 @@ class Game:
                     unconditionalsmessages[message]) for act in
                 range(self.dimension) for message in range(self.dimension)])
 
-        print("MutualInfo AM", mutualinfoAM)
+        #print("MutualInfo AM", mutualinfoAM)
 
         ### Finally, the info that acts carry about states
 
@@ -288,8 +335,8 @@ class Game:
         #print("eqbsender", equilibriumsender)
         #print("eqbreceiver", equilibriumreceiver)
 
-        print("jointprobSA",jointprobSA)
-        print("unconditionalsacts",unconditionalsacts)
+        #print("jointprobSA",jointprobSA)
+        #print("unconditionalsacts",unconditionalsacts)
         #print("unconditionalsacts", unconditionalsacts)
         #print("chances", self.chances)
 
@@ -297,7 +344,7 @@ class Game:
             safe_log(jointprobSA[act][state], unconditionalsacts[act] *
                 self.chances[state]) for act in range(self.dimension) for state in range(self.dimension)])
 
-        print("MutualInfo SA", mutualinfoSA)
+        #print("MutualInfo SA", mutualinfoSA)
 
 
         return(mutualinfoSM, mutualinfoAM, mutualinfoSA)
@@ -386,57 +433,44 @@ def order_list(alist):
     olist = sorted(alist, reverse=True)
     return [olist.index(element) for element in alist]
 
-def manygames():
-    possible_intrakendalls = [1.3333333333333333, 0.6666666666666666, 2.0,
-            1.6666666666666667, 0.0, 0.3333333333333333, 1.0]
-    possible_kendalls = [2.0, 1.33, 1.67, 0.67, 1.0, 2.67, 0.33, 2.33, 0.0,
-            3.0]
-    gamessender = {}
-    gamesreceiver = {}
-    chances = [1/3, 1/3, 1/3]
-    timestr = time.strftime("%d%b%H-%M")
-    for duo in itertools.product(possible_kendalls, possible_intrakendalls):
-        print("Type: {}".format(duo))
-        for i in range(1500):
-            print("EXPERIMENT", i)
-            #print()
-            entry = {}
-            gamesender =  Game(payoffs())
-            while gamesender.kendalldistance != duo[0] or gamesender.kendallsender != duo[1]:
-                gamesender = Game(payoffs())
-            gamereceiver = Game(payoffs())
-            while gamereceiver.kendalldistance != duo[0] or gamereceiver.kendallreceiver != duo[1]:
-                gamereceiver = Game(payoffs())
-            print(gamesender.kendalldistance, gamesender.kendallsender)
-            print(gamereceiver.kendalldistance, gamereceiver.kendallreceiver)
-            gamesender.equilibria, b, c, d = gamesender.info_in_equilibria() 
-            gamereceiver.equilibria, b, c, d = gamereceiver.info_in_equilibria() 
-            gamessender[str(gamesender.payoffs)] = gamesender.equilibria
-            gamesreceiver[str(gamereceiver.payoffs)] = gamereceiver.equilibria
-        gamesname = ''.join(["boostintrasender", str(duo), timestr])
-        with open(gamesname, 'w') as gamefile:
-            json.dump(gamessender, gamefile)
-        gamesname = ''.join(["boostintrareceiver", str(duo), timestr])
-        with open(gamesname, 'w') as gamefile:
-            json.dump(gamesreceiver, gamefile)
+def generate_30game():
+    sender = []
+    for j in range(3):
+        senderstate = [random.randrange(100) for i in range(3)]
+        while len(set(senderstate)) != len(senderstate):
+            senderstate = [random.randrange(100) for i in range(3)]
+        sender.append(senderstate)
+    osender = [order_list(state) for state in sender]
+    oreceiver = osender
+    receiverlong = []
+    senderlong = []
+    for i in range(3):
+        rmax = max(oreceiver[i])
+        rmin = min(oreceiver[i])
+        oreceiver[i][oreceiver[i].index(rmax)] = 3
+        oreceiver[i][oreceiver[i].index(rmin)]= 2
+        oreceiver[i][oreceiver[i].index(3)] = 0
+        state = [random.randrange(100) for j in range(3)]
+        while order_list(state) != oreceiver[i]:
+            state = [random.randrange(100) for i in range(3)]
+        receiverlong = receiverlong + state
+        senderlong = senderlong + sender[i]
+    return [item for pair in zip(senderlong, receiverlong) for item in pair]
 
 
-def manymanygames():
-    games = {}
-    chances = [1/3, 1/3, 1/3]
-    for j in range(100):
-        timestr = time.strftime("%d%b%H-%M")
-        for i in range(200):
-            print("EXPERIMENT", j,i)
-            entry = {}
-            game = Game(payoffs())
-            game.equilibria, game.maxinfo = game.info_in_equilibria() 
-            entry["equilibria"] = str(game.equilibria)
-            entry["sender"] = game.sender
-            entry["receiver"] = game.receiver
-            entry["kendallmod"] = game.kendallmod
-            entry["maxinfo"] = game.maxinfo
-            games[str(game.payoffs)] = entry
-        gamesname = ''.join(["manygames",str(j),str(i),"_",timestr])
-        with open(gamesname, 'w') as gamefile:
-            json.dump(games, gamefile)
+def how_many_kendalls(dimension):
+    kendallsender = []
+    for i in range(1000000):
+        payoff = payoffs(dimension)
+        game = Game(payoff)
+        pair = [game.cipeter, game.petersender]
+        if pair not in kendallsender:
+            kendallsender.append(pair)
+    #with open("sender", "w") as examples:
+    #    if sorted(kendallssender) == sorted(kendallsreceiver):
+    #        print("yes")
+    #        examples.write(str(sorted(kendallssender)))
+    #        return sorted(kendallssender), []
+    #    else:
+    #        print("no")
+    return kendallsender
