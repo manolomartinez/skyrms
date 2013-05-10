@@ -31,9 +31,11 @@ class Game:
 
     def intrakendallpeter(self):
         def points(state1, state2, element1, element2):
-            pairwise = math.floor(
-                abs(preferable(state1, element1, element2) -
-                preferable(state2, element1, element2)))
+            #pairwise = math.floor(
+            #    abs(preferable(state1, element1, element2) -
+            #    preferable(state2, element1, element2)))
+            pairwise = abs(preferable(state1, element1, element2)
+                           - preferable(state2, element1, element2))
             return pairwise
 
         def kendall(state1, state2):
@@ -88,10 +90,13 @@ class Game:
         senderplusmean = self.sender[state] + [sum(self.sender[state])/len(self.sender[state])]
         receiverplusmean = self.receiver[state] + [sum(self.receiver[state])/len(self.receiver[state])]
         #print(senderplusmean, receiverplusmean)
+
         def points(sender, receiver, element1, element2):
-            pairwise = math.floor(abs(preferable(sender, element1, element2) -
-            preferable(receiver, element1, element2)))
-            return pairwise 
+            #pairwise = math.floor(abs(preferable(sender, element1, element2) -
+            #preferable(receiver, element1, element2)))
+            pairwise = abs(preferable(sender, element1, element2) -
+                           preferable(receiver, element1, element2))
+            return pairwise
         kendall =  sum([points(senderplusmean, receiverplusmean,
             pair[0], pair[1]) for pair in
             itertools.combinations(range(self.dimension + 1), 2)])
