@@ -13,7 +13,7 @@ class Game:
         self.payoffs = payoffs
         self.sender, self.receiver = fromlisttomatrix(
             self.payoffs, self.dimension)
-        self.cipeter = self.aggregate_ci_peter()
+        self.cipeter = round(self.aggregate_ci_peter(), 2)
         self.kendalldistance = round(self. aggregate_kendall_distance(), 2)
         self.kendalldistances = self.aggregate_kendall_distance_distances()
         self.kendallsender, self.kendallreceiver = self.intrakendall()
@@ -30,14 +30,6 @@ class Game:
         return samebest
 
     def intrakendallpeter(self):
-        def points(state1, state2, element1, element2):
-            #pairwise = math.floor(
-            #    abs(preferable(state1, element1, element2) -
-            #    preferable(state2, element1, element2)))
-            pairwise = abs(preferable(state1, element1, element2)
-                           - preferable(state2, element1, element2))
-            return pairwise
-
         def kendall(state1, state2):
             state1plusmean = state1 + [sum(state1)/len(state1)]
             state2plusmean = state2 + [sum(state2)/len(state2)]
@@ -53,13 +45,9 @@ class Game:
         return sum(skendalls)/len(skendalls), sum(rkendalls)/len(rkendalls)
 
     def intrakendall(self):
-        def points(state1, state2, element1, element2):
-            pairwise = math.floor(abs(preferable(state1, element1, element2) -
-            preferable(state2, element1, element2)))
-            return pairwise 
         def kendall(state1, state2):
-            return sum([points(state1, state2, pair[0], pair[1]) for pair in 
-                itertools.combinations(range(self.dimension), 2)])
+            return sum([points(state1, state2, pair[0], pair[1]) for pair in
+                        itertools.combinations(range(self.dimension), 2)])
         skendalls = [kendall(self.sender[pair[0]], self.sender[pair[1]]) for
             pair in itertools.combinations(range(self.dimension), 2)]
         rkendalls = [kendall(self.receiver[pair[0]], self.receiver[pair[1]]) for
@@ -71,10 +59,6 @@ class Game:
             range(self.dimension)])
 
     def kendall_tau_distance(self, state):
-        def points(sender, receiver, element1, element2):
-            pairwise = math.floor(abs(preferable(sender, element1, element2) -
-            preferable(receiver, element1, element2)))
-            return pairwise 
         kendall =  sum([points(self.sender[state], self.receiver[state],
             pair[0], pair[1]) for pair in
             itertools.combinations(range(self.dimension), 2)])
@@ -90,13 +74,6 @@ class Game:
         senderplusmean = self.sender[state] + [sum(self.sender[state])/len(self.sender[state])]
         receiverplusmean = self.receiver[state] + [sum(self.receiver[state])/len(self.receiver[state])]
         #print(senderplusmean, receiverplusmean)
-
-        def points(sender, receiver, element1, element2):
-            #pairwise = math.floor(abs(preferable(sender, element1, element2) -
-            #preferable(receiver, element1, element2)))
-            pairwise = abs(preferable(sender, element1, element2) -
-                           preferable(receiver, element1, element2))
-            return pairwise
         kendall =  sum([points(senderplusmean, receiverplusmean,
             pair[0], pair[1]) for pair in
             itertools.combinations(range(self.dimension + 1), 2)])
@@ -119,7 +96,6 @@ class Game:
             return 1
         else:
             return distance
-
 
     def info_in_equilibria(self):
         gambitgame = bytes(self.write_efg(), "utf-8")
@@ -197,7 +173,6 @@ class Game:
         return proc
 
     def calculate_info_content(self, equilibria): # Given Gambit results, calculate in which equilibria do signals carry information
-        chance = self.chances
         sinfos = []
         rinfos = []
         jinfos = []
@@ -207,6 +182,8 @@ class Game:
             # The following takes a line such as "NE, 0, 0, 1, 0, 0, 1..." to a list [0, 0, 1, 0, 0, 1...]
             equilibrium = list(map(eval, line.split(sep =",")[1:]))
             mutualinfoSM, mutualinfoAM, mutualinfoSA = self.conditional_probabilities(equilibrium)
+            if pure_strategy(equilibrium) and mutualinfoSA > 10e-6:
+                print(self.payoffs, equilibrium)
             #print(mutualinfoSA)
             sinfos.append(mutualinfoSM)
             rinfos.append(mutualinfoAM)
@@ -403,6 +380,7 @@ def fromlisttomatrix(payoff, dimension): # Takes a list of intertwined sender an
         dimension)]
     return sendermatrix, receivermatrix
 
+
 def preferable(ranking, element1, element2): # returns 0 if element1 is
     # preferable; 0.5 if both equally preferable; 1 if element2 is preferable
     index1 = ranking[element1]
@@ -413,6 +391,16 @@ def preferable(ranking, element1, element2): # returns 0 if element1 is
         return 0.5
     if index2 < index1:
         return 1
+
+
+def points(state1, state2, element1, element2):
+    #pairwise = math.floor(
+        #abs(preferable(state1, element1, element2) -
+            #preferable(state2, element1, element2)))
+    pairwise = abs(preferable(state1, element1, element2)
+                   - preferable(state2, element1, element2))
+    return pairwise
+
 
 def setofindexes(originallist, element):
     return set([i for i in range(len(originallist)) if originallist[i] ==
@@ -437,6 +425,9 @@ def normalize_matrix(matrix):
 def order_list(alist):
     olist = sorted(alist, reverse=True)
     return [olist.index(element) for element in alist]
+
+def pure_strategy(equilibrium):
+    return all([weight > 0.99 or weight < 0.01 for weight in equilibrium])
 
 def generate_30game():
     sender = []
