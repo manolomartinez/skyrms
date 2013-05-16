@@ -13,11 +13,11 @@ class Game:
         self.payoffs = payoffs
         self.sender, self.receiver = fromlisttomatrix(
             self.payoffs, self.dimension)
-        self.cipeter = round(self.aggregate_ci_peter(), 2)
+        self.cistar = round(self.aggregate_ci_star(), 2)
         self.kendalldistance = round(self. aggregate_kendall_distance(), 2)
         self.kendalldistances = self.aggregate_kendall_distance_distances()
         self.kendallsender, self.kendallreceiver = self.intrakendall()
-        self.petersender, self.peterreceiver = self.intrakendallpeter()
+        self.starsender, self.starreceiver = self.intrakendallstar()
 
     def same_best(self):
         bestactsforsender = [
@@ -29,7 +29,7 @@ class Game:
             zip(bestactsforsender, bestactsforreceiver)]
         return samebest
 
-    def intrakendallpeter(self):
+    def intrakendallstar(self):
         def kendall(state1, state2):
             state1plusmean = state1 + [sum(state1)/len(state1)]
             state2plusmean = state2 + [sum(state2)/len(state2)]
@@ -64,13 +64,13 @@ class Game:
             itertools.combinations(range(self.dimension), 2)])
         return kendall
 
-    def aggregate_ci_peter(self):
-        return sum([self.chances[state] * self.common_interest_peter(state) for
+    def aggregate_ci_star(self):
+        return sum([self.chances[state] * self.common_interest_star(state) for
             state in range(self.dimension)])
-        #return [self.common_interest_peter(state) for state in
+        #return [self.common_interest_star(state) for state in
                 #range(self.dimension)]
 
-    def common_interest_peter(self, state):
+    def common_interest_star(self, state):
         senderplusmean = self.sender[state] + [sum(self.sender[state])/len(self.sender[state])]
         receiverplusmean = self.receiver[state] + [sum(self.receiver[state])/len(self.receiver[state])]
         #print(senderplusmean, receiverplusmean)
@@ -459,7 +459,7 @@ def how_many_kendalls(dimension):
     for i in range(1000000):
         payoff = payoffs(dimension)
         game = Game(payoff)
-        pair = [game.cipeter, game.petersender]
+        pair = [game.cistar, game.starsender]
         if pair not in kendallsender:
             kendallsender.append(pair)
     #with open("sender", "w") as examples:
