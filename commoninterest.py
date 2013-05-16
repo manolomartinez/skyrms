@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
-import io, itertools, json, math, random, subprocess, sys, time
-
-import scipy.stats
+import itertools
+import math
+import random
+import subprocess
 
 
 class Game:
@@ -38,11 +39,15 @@ class Game:
                     state1plusmean, state2plusmean, pair[0], pair[1])
                     for pair in itertools.combinations(
                         range(self.dimension + 1), 2)])
-        skendalls = [kendall(self.sender[pair[0]], self.sender[pair[1]]) for
+        skendalls = [kendall(
+            self.sender[pair[0]], self.sender[pair[1]]) for
             pair in itertools.combinations(range(self.dimension), 2)]
-        rkendalls = [kendall(self.receiver[pair[0]], self.receiver[pair[1]]) for
-            pair in itertools.combinations(range(self.dimension), 2)]
-        return sum(skendalls)/len(skendalls), sum(rkendalls)/len(rkendalls)
+        rkendalls = [kendall(self.receiver[pair[0]], self.receiver[pair[1]])
+                     for pair in itertools.combinations(
+                         range(self.dimension), 2)]
+        return round(sum(
+            skendalls)/len(skendalls), 2), round(
+                sum(rkendalls)/len(rkendalls), 2)
 
     def intrakendall(self):
         def kendall(state1, state2):
