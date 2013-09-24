@@ -182,7 +182,7 @@ stronger sense as well. Defining an \emph{information-using equilibrium}
 as one where the receiver makes use of informative signals to guide
 behavior, the proportion of games that include at least one
 information-using equilibrium increases monotonically and rather
-smoothly with both measures of common interest. We then look at the
+smoothly with both measures of common interest. (See below, in the \emph{Methods} section, for the equilibrium concept we have worked with throughout the paper.) We then look at the
 equilibria that support the \emph{highest} amount of information use for
 a given level of common interest, and again find a monotonic, though
 less smooth, relationship between degree of common interest and maximum
@@ -235,6 +235,23 @@ the time. Both sides receive payoffs as a consequence of the combination
 of the receiver's action and the state of the world. Sender and receiver
 payoffs may differ, and can be represented in the form seen in Table 1.
 
+\begin{table}[!ht]
+\caption{
+\bf{A Payoff Matrix}}
+\begin{tabular}{|c||c|c|c|}
+& $S_{1}$ & $S_{2}$ & $S_{3}$ \\
+\hline
+$A_{1}$ & 5,0 & 2,4 & 0,6 \\
+$A_{2}$ & 6,5 & 0,0 & 1,5 \\
+$A_{3}$ & 0,6 & 6,6 & 5,3 \\
+\end{tabular}
+\begin{flushleft}The pair of numbers in each cell represent the sender's and the
+receiver's payoffs, respectively, for a receiver action ($A$) performed
+in a given state of the world ($S$).
+\end{flushleft}
+\label{tab:label}
+\end{table}
+
 The payoff matrix defines a preference ordering over acts in each state
 for both sender and receiver. For example, in Table 1, the preference
 ordering for the sender in state 1 is {[}$A_{2}$
@@ -286,7 +303,7 @@ $C=0$ corresponds to complete conflict of interest. In response to
 results outlined below we also make use of a refinement of $C$; which
 compares not only the agents' preference orderings of the actions in
 each state, but also tracks how the agents' payoffs for each action relate to the mean
-value of the payoffs the agent might receive in that state. (For details see the Supporting Information.) As discussed below, $C^*$ is one
+value of the payoffs the agent might receive in that state. (For details see Text S1.) As discussed below, $C^*$ is one
 among several ways of refining the simpler measure, $C,$ and we do not
 claim it is best for all purposes.
 
@@ -306,7 +323,7 @@ high for an agent with respect to a pair of states if good acts in one
 state are bad acts in the other state. \emph{K} for an agent averages
 all comparisons of states, rescaled to lie between zero and one, where
 $K=1$ corresponds to the highest degree of contingency of payoff. (For
-details see the Supporting Information.)
+details see Text S1.)
 
 Our aim is to generalize about games with different levels of common
 interest and contingency of payoff for the agents. The method used is to
@@ -340,13 +357,13 @@ is making use of that information. Our primary focus is situations in
 which informative signals are both sent and used. This requires that the
 signals carry information about states and acts carry information about
 signals. Given that receivers only have access to the state of the world
-by attending to signals, by the \emph{data processing inequality} \cite{Cover2006}
+by attending to signals, by the \emph{data processing inequality} \cite[p.~34]{Cover2006}
 it is not possible for acts to carry more information about states than
 signals do. (States, signals, and acts form a Markov chain.) Any mutual
 information between states and acts arises from the use by the receiver
 of information about states in the signals.
 
-Computational methods are described in the Supporting Information but
+Computational methods are described in Text S1 but
 one feature should be noted here: Lemke's algorithm is not guaranteed to
 find every equilibrium in a game \cite{Koller1996}. So the reports of
 information-using equilibria below may be under-counts.
@@ -389,6 +406,21 @@ have information-using equilibria. Table 2 shows a case of this kind --
 not a case from one of our samples, but a simplified case constructed
 using the computer-generated cases as a guide.
 
+\begin{table}[!ht]
+\caption{
+\bf{A game with $C=0$ and an information-using equilibrium}}
+\begin{tabular}{|c||c|c|c|}
+& $S_{1}$ & $S_{2}$ & $S_{3}$ \\
+\hline
+$A_{1}$ & 5,5 & 2,4 & 2,1 \\
+$A_{2}$ & 6,0 & 0,6 & 3,0 \\
+$A_{3}$ & 0,6 & 6,0 & 0,3 \\
+\end{tabular}
+\begin{flushleft}
+\end{flushleft}
+\label{tab:label}
+ \end{table}
+
 Despite zero $C,$ the game in Table 2 has an information-using
 equilibrium, whose sender and receiver rules are as follows:
 
@@ -410,7 +442,7 @@ our measure $C,$ and it is one kind of common interest between the two
 agents. A way to modify \emph{C} that takes this factor into account is
 to compare, across sender and receiver, their preference orderings over
 both the payoffs that arise from different actions and also the average
-of the payoffs for that agent in that state. This is done by defining a "dummy act" for the receiver in each state, an act that secures for each agent the mean of the other payoffs possible in that state. This dummy act and its payoff are then included in the determination of each agent's preference ordering over acts in that state; the two agents might agree, or disagree, for example, about whether the payoff of Act 1 is higher than the mean of their payoffs possible in that state. $C^*$, like $C$, counts discordant pairs of preferences and is scaled to lie between 0 and 1. (For further details see the Supporting Information).  $C^*$ yields
+of the payoffs for that agent in that state. This is done by defining a "dummy act" for the receiver in each state, an act that secures for each agent the mean of the other payoffs possible in that state. This dummy act and its payoff are then included in the determination of each agent's preference ordering over acts in that state; the two agents might agree, or disagree, for example, about whether the payoff of Act 1 is higher than the mean of their payoffs possible in that state. $C^*$, like $C$, counts discordant pairs of preferences and is scaled to lie between 0 and 1. (For further details see Text S1).  $C^*$ yields
 a similar relationship between common interest and the proportion of
 games with an information-using equilibrium to that seen in Figure 1.
 
@@ -422,6 +454,21 @@ is possible for a game to have an information-using equilibrium with
 complete conflict of interest. A case of this kind, also one modeled on
 a less transparent computer-generated case, is shown in Table 3. This
 game has the following information-using equilibrium:
+
+\begin{table}[!ht]
+\caption{
+\bf{A game with $C^*=0$ and an information-using equilibrium.}}
+\begin{tabular}{|c||c|c|c|}
+& $S_{1}$ & $S_{2}$ & $S_{3}$ \\
+\hline
+$A_{1}$ & 1,8 & 8,1 & 0,6 \\
+$A_{2}$ & 3,7 & 6,3 & 1,5 \\
+$A_{3}$ & 8,1 & 1,8 & 5,3 \\
+\end{tabular}
+\begin{flushleft}
+\end{flushleft}
+\label{tab:label}
+ \end{table}
 
 \begin{description}
 \item[Sender:]
@@ -445,7 +492,7 @@ in $S_3$ by the fact that the message the sender sends in that state is
 ambiguous; state 2 is used by the sender to deter exploitation in the
 other two states, and in this state all three acts are produced.
 
-In both cases in Table 2 and 3 the information-using equilbria are very
+In both cases in Tables 2 and 3 the information-using equilbria are very
 fragile, as either the sender (in 3) or the receiver (in 2) can shift
 without penalty to a strategy in which the mutual information between
 states and acts goes to zero. Not all cases of information-using
@@ -453,8 +500,7 @@ equilbria and zero common interest have this feature, however; sometimes
 information-use is less easily lost. The lowest level of common interest
 at which an information-using equilibrium is found in which neither
 sender nor receiver plays a mixed strategy, probabilistically varying
-their response to a state or a signal, is $C^*=0.11$ (see the Supporting
-Information for examples of both phenomena described in this paragraph).
+their response to a state or a signal, is $C^*=0.11$ (see Text S1 for examples of both phenomena described in this paragraph).
 
 A valuable feature of \emph{C} is the weakness of the assumptions
 required for its measurement; \emph{C} assumes only ordinal, not
@@ -470,7 +516,7 @@ hold. Some constant-sum games have nonzero $C^*$, on the other hand, and
 not all $C^*=0$ games are constant-sum. Due to its simplicity and weak
 assumptions, in the remainder of the body of this paper we will use
 \emph{C} to measure common interest. $C^*$ and constant-sum games are
-discussed in the Supporting Information.
+discussed in Text S1.
 
 Once we know how likely a given level of \emph{C} is to maintain at
 least one information-using equilibrium, we can also ask what is the
@@ -489,8 +535,7 @@ monotonically with common interest, as expected, but in a step-like way
 and with quite high values of mutual information between states and acts
 seen even at the lowest values of $C$. Conversely, our sample includes
 cases with high values of \emph{C} and very minimal information use at
-equilibrium ($C=0.78$, mutual information = 0.03 bits; see the
-Supporting Information).
+equilibrium ($C=0.78$, mutual information = 0.03 bits; see Text S1).
 
 A further analysis of these cases takes into account the contingency of
 payoff for sender and receiver, as well as common interest. The
@@ -651,69 +696,16 @@ $n=1500$.}
 \caption{
     {\bf Relation between common interest,
 contingency of payoff for each agent, and the proportion of games with
-an information-using equilibrium.} See the Supporting Information for explanations of
+an information-using equilibrium.} See Text S1 for explanations of
 C, $K_S$ and $K_R$. 1500 games were sampled and analyzed for each
 jointly possible combination of \emph{C} and $K_S$ ($K_R$).}
 \label{Figure_label}
 \end{figure}
 \pagebreak
-\section*{Tables}
 
-\begin{table}[!ht]
-\caption{
-\bf{A Payoff Matrix}}
-\begin{tabular}{|c||c|c|c|}
-& $S_{1}$ & $S_{2}$ & $S_{3}$ \\
-\hline
-$A_{1}$ & 5,0 & 2,4 & 0,6 \\
-$A_{2}$ & 6,5 & 0,0 & 1,5 \\
-$A_{3}$ & 0,6 & 6,6 & 5,3 \\
-\end{tabular}
-\begin{flushleft}The pair of numbers in each cell represent the sender's and the
-receiver's payoffs, respectively, for a receiver action ($A$) performed
-in a given state of the world ($S$).
-\end{flushleft}
-\label{tab:label}
-\end{table}
-
-\begin{table}[!ht]
-\caption{
-\bf{A game with $C=0$ and an information-using equilibrium}}
-\begin{tabular}{|c||c|c|c|}
-& $S_{1}$ & $S_{2}$ & $S_{3}$ \\
-\hline
-$A_{1}$ & 5,5 & 2,4 & 2,1 \\
-$A_{2}$ & 6,0 & 0,6 & 3,0 \\
-$A_{3}$ & 0,6 & 6,0 & 0,3 \\
-\end{tabular}
-\begin{flushleft}
-\end{flushleft}
-\label{tab:label}
- \end{table}
-
-\begin{table}[!ht]
-\caption{
-\bf{A game with $C^*=0$ and an information-using equilibrium.}}
-\begin{tabular}{|c||c|c|c|}
-& $S_{1}$ & $S_{2}$ & $S_{3}$ \\
-\hline
-$A_{1}$ & 1,8 & 8,1 & 0,6 \\
-$A_{2}$ & 3,7 & 6,3 & 1,5 \\
-$A_{3}$ & 8,1 & 1,8 & 5,3 \\
-\end{tabular}
-\begin{flushleft}
-\end{flushleft}
-\label{tab:label}
- \end{table}
-
-\pagebreak
 \section*{Supporting Information Legend}
 \begin{description}
     \item[Text S1:]Methods -- Definitions -- Additional Examples -- $C$, $C^*$, and constant-sum games -- Interactions between common interest and contingency of payoff
 \end{description}
-
-
-
-
 \end{document}
 
