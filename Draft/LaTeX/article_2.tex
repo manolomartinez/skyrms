@@ -1,0 +1,411 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Journal Article
+% LaTeX Template
+% Version 1.3 (9/9/13)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Frits Wenneker (http://www.howtotex.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+% \documentclass[twoside]{scrartcl}
+\documentclass{article}
+
+\usepackage{lipsum} % Package to generate dummy text throughout this template
+\usepackage{graphicx}
+\usepackage{epstopdf}
+
+\usepackage[sc]{mathpazo} % Use the Palatino font
+\usepackage[T1]{fontenc} % Use 8-bit encoding that has 256 glyphs
+%\linespread{1.05} % Line spacing - Palatino needs more space between lines
+\usepackage{microtype} % Slightly tweak font spacing for aesthetics
+
+% amsmath package, useful for mathematical formulas
+\usepackage{amsmath}
+% amssymb package, useful for mathematical symbols
+\usepackage{amssymb}
+\usepackage[hmarginratio=1:1,top=32mm,columnsep=20pt]{geometry} % Document margins
+\usepackage{multicol} % Used for the two-column layout of the document
+%\usepackage[hang, small,labelfont=bf,up,textfont=it,up]{caption} % Custom captions under/above floats in tables or figures
+\usepackage{booktabs} % Horizontal rules in tables
+\usepackage{float} % Required for tables and figures in the multi-column environment - they need to be placed in specific locations with the [H] (e.g. \begin{table}[H])
+\usepackage{hyperref} % For hyperlinks in the PDF
+\usepackage{subcaption}
+
+\usepackage{lettrine} % The lettrine is the first enlarged letter at the beginning of the text
+\usepackage{paralist} % Used for the compactitem environment which makes bullet points with less space between them
+
+\usepackage{titlesec} % Allows customization of titles
+\renewcommand\thesection{\Roman{section}} % Roman numerals for the sections
+\renewcommand\thesubsection{\Roman{subsection}} % Roman numerals for subsections
+\renewcommand{\thetable}{S\arabic{table}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\titleformat{\section}[block]{\Large\scshape\centering}{\thesection.}{1em}{} % Change the look of the section titles
+\titleformat{\subsection}[block]{\large}{\thesubsection.}{1em}{} % Change the look of the section titles
+
+\usepackage{fancyhdr} % Headers and footers
+\pagestyle{fancy} % All pages have headers and footers
+\fancyhead{} % Blank out the default header
+\fancyfoot{} % Blank out the default footer
+\fancyhead[C]{Communication and Common Interest: Supporting Information} % Custom header text
+\fancyfoot[RO,LE]{\thepage} % Custom footer text
+
+\usepackage[numbers]{natbib}
+\bibliographystyle{apalike}
+
+% Remove brackets from numbering in List of References
+%\makeatletter
+%\renewcommand{\@biblabel}[1]{\quad#1.}
+%\makeatother
+
+\def\mathbi#1{\textbf{\em #1}} %bold italics in math definitions
+\usepackage{flafter}
+
+
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION
+%----------------------------------------------------------------------------------------
+
+\title{Communication and Common Interest\\ \Large{Supporting Information}} % Article title
+
+\author{
+\large
+\textsc{Peter Godfrey-Smith, Manolo Mart\'inez}\\
+\normalsize Philosophy Program, The Graduate Center, City University of New York\\ % Your institution
+\normalsize mmartinez3@gc.cuny.edu
+}
+
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle % Insert title
+
+%\thispagestyle{fancy} % All pages have headers and footers
+
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE CONTENTS
+%----------------------------------------------------------------------------------------
+
+%\begin{multicols}{2} % Two-column layout throughout the main article text
+
+\section*{Methods}
+
+The games analyzed in the text were generated randomly from the
+space of games with 3 equiprobable states, 3 messages, and 3
+receiver actions. Payoffs were constrained to lie between 0 and 99.
+The sampling was carried out using the \texttt{randrange} function in the
+\texttt{random} module that is part of the Python standard library (version
+3.3.2). The source code for this and all other calculations in this paper
+is available at \href{https://github.com/manolomartinez/common-interest}{https://github.com/manolomartinez/common-interest}.
+
+Formulas for the calculation of $C$, $C^*$, $K_S$, $K_R$, $K^*_S$, and $K^*_R$ are given below. Note that tied payoffs are handled in the following way.
+When one agent has tied payoffs for two acts in a state, this is treated
+as a concordant pair in the calculation of the $C$ parameters regardless of how the
+other agent orders those acts in that state. The treatment of ties in
+the calculation of the $K$ parameters is analogous.
+
+\section*{Measures of Common Interest and Contingency of Payoff}
+
+\begin{description}
+    \item[$\mathbi{C}$:]
+A measure of common interest between sender and receiver in a signaling
+game in which payoffs for both players depend on the pairing of the
+receiver's action with the state of the world. $C$ measures the extent to
+which sender and receiver agree on their preference orderings over
+actions in each state.
+\end{description}
+
+For states $\left\{S_{1},\dots,S_{n}\right\}$ and acts
+$\left\{A_{1},\dots,A_{n}\right\}$, where the sender's payoff for act
+$A_j$ in state $S_i$ is $\alpha_{ij}$, the receiver's payoff for act
+$A_j$ in state $S_i$ is $\beta_{ij}$, we define the function
+$D_{sender}$, that takes every triple of a state and two different acts
+to a rational:
+
+\[D_{sender}\left(S_i, A_j, A_k\right) = \begin{cases}
+    0 & \mbox{if } \alpha_{ij} > \alpha_{ik} \\
+    1 & \mbox{if } \alpha_{ij} < \alpha_{ik} \\
+    \frac{1}{2} & \mbox{if } \alpha_{ij} = \alpha_{ik}
+    \end{cases}\]
+
+$D_{receiver}$ is defined analogously:
+
+\[D_{receiver}\left(S_i, A_j, A_k\right) = \begin{cases}
+    0 & \mbox{if } \beta_{ij} > \beta_{ik} \\
+    1 & \mbox{if } \beta_{ij} < \beta_{ik} \\
+    \frac{1}{2} & \mbox{if } \beta_{ij} = \beta_{ik}
+    \end{cases}\]
+
+Finally,
+
+%\[C = 1 - \frac{2}{n(n-1)}\cdot \sum\limits_{1 \leq i \leq n}\sum\limits_{1 < j \leq n} \sum\limits_{1 \leq k < j} P\left(S_{i}\right)\cdot\left\lfloor D_{sender}(i, j, k) - D_{receiver}(i,j,k)\right\rfloor\]
+\[C = 1 - \frac{2}{n(n-1)}\cdot \sum\limits_{\substack{1 \leq i \leq n, \\ 1 < j \leq n, \\ 1 \leq k < j}} P\left(S_{i}\right)\cdot\left\lfloor D_{sender}(i, j, k) - D_{receiver}(i,j,k)\right\rfloor\]
+
+Some remarks regarding notation, which apply to all summations in this document:
+\begin{itemize}
+
+\item $\left\lfloor a \right\rfloor$ is the largest integer less than or equal to the absolute value of \emph{a}. 
+
+\item $\sum\limits_{\substack{a, \\ \ldots \\ z}}$ is to be read as $\sum\limits_{a}  \ldots \sum\limits_{ z}$. 
+
+\item In this summation, $k$ is always less than $j$. The intended effect is that when, e.g., $n=3$, then $\langle j,k \rangle$ takes the values $\langle 2,1 \rangle$, $\langle 3,1 \rangle$, $\langle 3,2 \rangle$. 
+
+    \end{itemize}
+
+
+\begin{description}
+    \item[$\mathbi{C}^\mathbi{*}$:]
+A finer-grained measure of common interest. $C^*$
+measures the extent to which sender and receiver agree on their
+preference orderings over actions in each state, but tracks also whether
+sender and receiver agree that a given act in a state yields a payoff
+higher than the (unweighted) mean of the payoffs that the agent can
+receive in that state.
+\end{description}
+
+For each state $S_{i}$ we introduce an extra payoff value for both
+sender and receiver:
+
+\[\alpha_{in^\prime} = \frac{1}{n}\sum\limits_{1 \leq j \leq n} \alpha_{ij}\]
+\[\beta_{in^\prime} = \frac{1}{n}\sum\limits_{1 \leq j \leq n} \beta_{ij}\]
+
+where $n^\prime = n + 1$. Then,
+
+%\[C^* = 1 - \frac{2}{n^\prime(n^\prime-1)}\cdot \sum\limits_{1 \leq i \leq n} \sum\limits_{1 < j \leq n^\prime} \sum\limits_{1 \leq k < j} P\left(S_{i}\right)\cdot\left\lfloor D_{sender}(i, j, k) - D_{receiver}(i,j,k)\right\rfloor\]
+\[C^* = 1 - \frac{2}{n^\prime(n^\prime-1)}\cdot \sum\limits_{\substack{1 \leq i \leq n, \\ 1 < j \leq n^\prime, \\ 1 \leq k < j}} P\left(S_{i}\right)\cdot\left\lfloor D_{sender}(i, j, k) - D_{receiver}(i,j,k)\right\rfloor\]
+
+\begin{description}
+    \item[$\mathbi{K}_\mathbi{S}$ and $\mathbi{K}_\mathbi{R}$:]
+$K_S$ ($K_R$) measures the exent to
+which the sender's (receiver's) preference ordering over receiver actions 
+varies with the state of the world.
+\end{description}
+
+With $D_{sender}$ and $D_{receiver}$ as above,
+
+%\[K_{S} = \frac{2}{n(n-1)}\cdot \sum\limits_{1 < i \leq n} \sum\limits_{ 1 \leq j < i} \sum\limits_{ 1 < k \leq n} \sum\limits_{ 1 \leq l < k} \frac{2}{n(n-1)}\cdot\left\lfloor D_{sender}(i, k, l) - D_{sender}(j,k,l)\right\rfloor\]
+\[K_{S} = \frac{2}{n(n-1)}\cdot \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{sender}(i, k, l) - D_{sender}(j,k,l)\right\rfloor\]
+
+%\[K_{R} = \frac{2}{n(n-1)}\cdot \sum\limits_{1 < i \leq n} \sum\limits_{ 1 \leq j < i} \sum\limits_{ 1 < k \leq n} \sum\limits_{ 1 \leq l < k} \frac{2}{n(n-1)}\cdot\left\lfloor D_{receiver}(i, k, l) - D_{receiver}(j,k,l)\right\rfloor\]
+\[K_{R} = \frac{2}{n(n-1)}\cdot \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{receiver}(i, k, l) - D_{receiver}(j,k,l)\right\rfloor\]
+
+\begin{description}
+    \item[$\mathbi{K}^*_\mathbi{S}$ and $\mathbi{K}^*_\mathbi{R}$:]
+These are modifications of measures $K_S$ and $K_R$. The modification is strictly analogous to the one that takes $C$ to $C^*$.
+
+\end{description}
+
+With $D_{sender}, D_{receiver}, n^\prime, \alpha_{in^\prime}$, $\beta_{in^\prime}$ as above,
+
+%\[K^{*}_{S} = \frac{2}{n^\prime(n^\prime-1)}\cdot \sum\limits_{1 < i \leq n} \sum\limits_{ 1 \leq j < i} \sum\limits_{ 1 < k \leq n^\prime} \sum\limits_{ 1 \leq l < k} \frac{2}{n(n-1)}\cdot\left\lfloor D_{sender}(i, k, l) - D_{sender}(j,k,l)\right\rfloor\]
+\[K^{*}_{S} = \frac{2}{n^\prime(n^\prime-1)}\cdot \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n^\prime, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{sender}(i, k, l) - D_{sender}(j,k,l)\right\rfloor\]
+
+%\[K^{*}_{R} = \frac{2}{n^\prime(n^\prime-1)}\cdot \sum\limits_{1 < i \leq n} \sum\limits_{ 1 \leq j < i} \sum\limits_{ 1 < k \leq n^\prime} \sum\limits_{ 1 \leq l < k} \frac{2}{n(n-1)}\cdot\left\lfloor D_{receiver}(i, k, l) - D_{receiver}(j,k,l)\right\rfloor\]
+\[K^{*}_{R} = \frac{2}{n^\prime(n^\prime-1)}\cdot \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n^\prime, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{receiver}(i, k, l) - D_{receiver}(j,k,l)\right\rfloor\]
+
+%------------------------------------------------
+
+\section*{Additional Examples}
+
+The games represented in Tables 2 and 3 of the main text are modeled on
+games appearing in our computer-generated samples. Above are two
+games from that sample, with $C=0$ (Table S1a) and $C^*=0$ (Table S1b).
+
+\begin{table}
+    \centering
+    \begin{subtable}{.4\textwidth}
+        %\centering
+        \begin{tabular}{|c||c|c|c|}
+        & $S_{1}$ & $S_{2}$ & $S_{3}$ \\
+        \hline
+        $A_{1}$ & 44,9 & 21,69 & 84,49 \\
+        $A_{2}$ & 14,71 & 85,4 & 38,56 \\
+        $A_{3}$ & 25,16 & 35,44 & 83,55 \\
+        \end{tabular}
+        \newline
+        \flushleft{\emph{Sender}: $S_1 \rightarrow m_2; S_2 \rightarrow [(3/65)m_1,(62/65)m_2]; S_3 \rightarrow m_1$}
+        \flushleft{\emph{Receiver}: $m_1 \rightarrow A_3; m_2 \rightarrow [(25/32)A_1, (7/32)A_2]; m_3 \rightarrow [(25/32)A_1, (7/32)A_2]$}
+        \newline
+        \caption{A game with $C=0$}
+    \end{subtable}
+    \begin{subtable}{.4\textwidth}
+        %\centering
+        \begin{tabular}{|c||c|c|c|}
+        & $S_{1}$ & $S_{2}$ & $S_{3}$ \\
+        \hline
+        $A_{1}$ & 31,7 & 0,95 & 57,26 \\
+        $A_{2}$ & 5,71 & 99,1 & 15,62 \\
+        $A_{3}$ & 17,66 & 62,23 & 28,48 \\
+        \end{tabular}
+        \newline
+        \flushleft{\emph{Sender}: $S_1 \rightarrow m_1; S_2 \rightarrow [(29/47)m_1,(18/47)m_2]; S_3 \rightarrow m_2$}
+        \flushleft{\emph{Receiver}: $m_1 \rightarrow A_3; m_2 \rightarrow [(37/99)A_1, (62/99)A_2]; m_3 \rightarrow [(37/99)A_1, (62/99)A_2]$}
+        \newline
+        \caption{A game with $C^*=0$}
+    \end{subtable}
+    \caption{Games and their information-using equilibria}
+    \label{tab:label}
+\end{table}
+
+In both these games -- and in contrast to the games in Tables 2 and 3 -- it
+is \emph{not} the case that either sender or receiver, merely by deploying
+pure strategies, can eliminate information use.  Once in an information-using equilibrium, no possible sequence of pure-strategy best responses by sender or receiver can take either of them to a strategy in which there is complete pooling (where A is a best response to B if and only if there is no response to B that gains a higher payoff than A). So no amount of ``drift'' in these cases can take sender and receiver from a situation in which information is used to a situation in which it is not.
+
+
+The game with lowest common interest uncovered in our sample
+in which there is an information-using equilibrium where neither
+sender or receiver uses a mixed strategy is a game in which $C=0.22$
+and $C^*=0.11$. This game is in Table S2a. Table S2b gives
+another example discussed in the text, a case where common interest
+is high ($C=0.78$) and mutual information between states and acts is
+present at an equilibrium, but the amount of mutual information is very small: 0.03 bits.
+
+\begin{table}
+    \centering
+    \begin{subtable}{.5\textwidth}
+        %\centering
+        \begin{tabular}{|c||c|c|c|}
+        & $S_{1}$ & $S_{2}$ & $S_{3}$ \\
+        \hline
+        $A_{1}$ & 17,27 & 22,72 & 87,1 \\
+        $A_{2}$ & 38,15 & 75,16 & 70,38 \\
+        $A_{3}$ & 18,29 & 8,45 & 81,12 \\
+        \end{tabular}
+        \newline
+        \flushleft{\emph{Sender}: $S_1 \rightarrow m_2; S_2 \rightarrow m_3; S_3 \rightarrow m_3$}
+        \flushleft{\emph{Receiver}: $m_1 \rightarrow A_3; m_2 \rightarrow A_3;$\\$m_3 \rightarrow A_1$}
+        \newline
+        \caption{A game with $C=0.22$ ($C*=0.11$)\\ and a pure-strategy information-using\\ equilibrium}
+    \end{subtable}
+    \begin{subtable}{.4\textwidth}
+        %\centering
+        \begin{tabular}{|c||c|c|c|}
+        & $S_{1}$ & $S_{2}$ & $S_{3}$ \\
+        \hline
+        $A_{1}$ & 92,79 & 23,59 & 99,64 \\
+        $A_{2}$ & 68,57 & 40,80 & 22,86 \\
+        $A_{3}$ & 7,41 & 23,66 & 28,64 \\
+        \end{tabular}
+        \newline
+        \flushleft{\emph{Sender}: $S_1 \rightarrow m_2; S_2 \rightarrow m_3; S_3 \rightarrow m_2$}
+        \flushleft{\emph{Receiver}: $m_1 \rightarrow A_3; m_2 \rightarrow [(6/77)A_1, (71/77)A_2]; m_3 \rightarrow A_2$}
+        \newline
+        \caption{A game with $C=0.78$ and mutual information between states and acts of 0.03 bits.}
+    \end{subtable}
+    \caption{Games and their information-using equilibria}
+    \label{tab:label}
+\end{table}
+
+
+%------------------------------------------------
+
+\section*{$C$, $C^*$, and constant-sum games}
+
+Our approach to measuring common interest attends to the relations
+between the sender's and receiver's preference orderings over actions
+in each state (see above for details). $C$
+assumes only ordinal utilities, while $C^*$ assumes cardinal utilities but
+does not require that sender and receiver payoffs be commensurable.
+An alternative concept of complete conflict of interest uses the idea of
+a constant-sum game: a game is constant-sum if for each state there is
+ a total payoff available that is divided in different ways between the
+two agents, depending on the receiver's action. Actions affect
+the division but not the amount divided. This concept of conflict of
+interest assumes cardinal utilities and commensurability across
+agents. This commensurability condition is not met in some
+biologically relevant cases, such as those in which signaling occurs
+across partners from different species -- often, different
+kingdoms -- and these are cases where the concept of common interest
+can be fruitfully applied \citep{Bergstrom2001, FitzGibbon1988, Harrison2005}
+
+When the stronger set of assumptions required to classify
+games as constant-sum, or not, are met, the following implications
+hold. All constant-sum games have $C=0$, but not conversely. All $C^*=0$
+games have $C=0$, but not conversely. Some constant-sum games are
+$C^*=0$ and some are not, as a consequence of the role played by ties
+(see above; when sender and receiver in a constant-sum three-act
+game agree, for example, that their middle score is midway between
+their high and low scores in a state, this gives them non-zero $C^*,$ as
+was pointed out to us by Elliott Wagner). Lastly, not all $C^*=0$ games
+are constant-sum.
+
+As noted in the text, the function relating the proportion of
+games with an information-using equilibrium to $C^*$ is similar to the
+function for $C$. Figure S1 below, analogous to Figure 1 in the main text,
+gives the proportion of games at each level of $C^*$ with at least one
+ information-using equilibrium.
+
+\begin{figure}[!ht]
+\begin{center}
+    \includegraphics{FigS1.eps}
+\end{center}
+\caption{The proportion of games at each level of $C^*$ with
+at least one information-using equilibrium. For each value of $C^*$,
+$n=1500$.}
+\label{Figure_label}
+\end{figure}
+
+\section*{Interactions between common interest and \\contingency of
+payoff}
+
+Figure 3 in the main text shows interactions between common
+interest ($C$) and contingency of payoff for sender ($K_S$) and receiver
+($K_R$) . As expected, the proportion of games with information-using
+equilibria generally increases with $C$ and with both $K_S$ and $K_R$.
+Contingency of payoff for sender has a more complex role, however,
+as when the sender's contingency of payoff is very low, intermediate
+values of $C$ present a local maximum in the proportion of games with
+ information-using equilibria. The asymmetry between the roles of
+sender and receiver has the consequence that a sender can benefit
+from sending informative signals even when $K_S=0$, as they need to
+influence a receiver who seeks to vary their act with the state of the
+world.
+
+We performed a finer-grained analysis of these relationships by
+using $C^*$ rather than $C$, and $K^*_S$ and $K^*_R$. These latter measures are
+similar to $K_S$ and $K_R$ but are adjusted in the same way that $C^*$ adjusts
+C. $K^*_S$, for example, compares the preference orderings over acts for
+the sender in different states of the world, but also compares the
+payoff for each act to the mean of the different payoffs the sender might receive in that
+state. (Computational formulas are above.) The aim here, as in $C^*$, is
+to track cases where two states share a second-best act whose payoff
+is close to the best possible payoff in those states. The results are
+given in Figure S2 below. The resulting analysis gives similar results to
+those discussed in the text, with a somewhat clearer ``hump'' in the
+sender's chart at low values of $K^*_S$ and intermediate values of $C^*$.
+
+\begin{figure}[!ht]
+\begin{center}
+    \includegraphics[scale=0.9]{FigS2.eps}
+\end{center}
+\caption
+    {Relation between common interest (using $C^*$)
+contingency of payoff for each agent (using $K^*_S$ and
+$K^*_R$), and the proportion of games with
+an information-using equilibrium. 1500 games were sampled and analyzed for each
+jointly possible combination of $C^*$ and $K^*_S$ ($K^*_R$).}
+\label{Figure_label}
+\end{figure}
+
+
+%------------------------------------------------
+\bibliography{/home/manolo/.pandoc/default}
+%----------------------------------------------------------------------------------------
+
+%\end{multicols}
+
+\end{document}
