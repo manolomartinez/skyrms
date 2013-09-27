@@ -190,7 +190,7 @@ where $n^\prime = n + 1$. Then,
 
 \begin{description}
     \item[$\mathbi{K}_\mathbi{S}$ and $\mathbi{K}_\mathbi{R}$:]
-$K_S$ ($K_R$) measures the exent to
+$K_S$ ($K_R$) measures the extent to
 which the sender's (receiver's) preference ordering over receiver actions 
 varies with the state of the world.
 \end{description}
@@ -198,10 +198,12 @@ varies with the state of the world.
 With $D_{sender}$ and $D_{receiver}$ as above,
 
 %\[K_{S} = \frac{2}{n(n-1)}\cdot \sum\limits_{1 < i \leq n} \sum\limits_{ 1 \leq j < i} \sum\limits_{ 1 < k \leq n} \sum\limits_{ 1 \leq l < k} \frac{2}{n(n-1)}\cdot\left\lfloor D_{sender}(i, k, l) - D_{sender}(j,k,l)\right\rfloor\]
-\[K_{S} = \frac{2}{n(n-1)}\cdot \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{sender}(i, k, l) - D_{sender}(j,k,l)\right\rfloor\]
+\[K_{S} = \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{sender}(i, k, l) - D_{sender}(j,k,l)\right\rfloor\]
 
 %\[K_{R} = \frac{2}{n(n-1)}\cdot \sum\limits_{1 < i \leq n} \sum\limits_{ 1 \leq j < i} \sum\limits_{ 1 < k \leq n} \sum\limits_{ 1 \leq l < k} \frac{2}{n(n-1)}\cdot\left\lfloor D_{receiver}(i, k, l) - D_{receiver}(j,k,l)\right\rfloor\]
-\[K_{R} = \frac{2}{n(n-1)}\cdot \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{receiver}(i, k, l) - D_{receiver}(j,k,l)\right\rfloor\]
+\[K_{R} = \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{receiver}(i, k, l) - D_{receiver}(j,k,l)\right\rfloor\]
+
+These formulas are not normalized. In the generation of data for this paper, the normalization coefficients (i.e., the maximum values for $K_S$ and $K_R$) were found numerically.
 
 \begin{description}
     \item[$\mathbi{K}^*_\mathbi{S}$ and $\mathbi{K}^*_\mathbi{R}$:]
@@ -212,11 +214,12 @@ These are modifications of measures $K_S$ and $K_R$. The modification is strictl
 With $D_{sender}, D_{receiver}, n^\prime, \alpha_{in^\prime}$, $\beta_{in^\prime}$ as above,
 
 %\[K^{*}_{S} = \frac{2}{n^\prime(n^\prime-1)}\cdot \sum\limits_{1 < i \leq n} \sum\limits_{ 1 \leq j < i} \sum\limits_{ 1 < k \leq n^\prime} \sum\limits_{ 1 \leq l < k} \frac{2}{n(n-1)}\cdot\left\lfloor D_{sender}(i, k, l) - D_{sender}(j,k,l)\right\rfloor\]
-\[K^{*}_{S} = \frac{2}{n^\prime(n^\prime-1)}\cdot \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n^\prime, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{sender}(i, k, l) - D_{sender}(j,k,l)\right\rfloor\]
+\[K^{*}_{S} = \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n^\prime, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{sender}(i, k, l) - D_{sender}(j,k,l)\right\rfloor\]
 
 %\[K^{*}_{R} = \frac{2}{n^\prime(n^\prime-1)}\cdot \sum\limits_{1 < i \leq n} \sum\limits_{ 1 \leq j < i} \sum\limits_{ 1 < k \leq n^\prime} \sum\limits_{ 1 \leq l < k} \frac{2}{n(n-1)}\cdot\left\lfloor D_{receiver}(i, k, l) - D_{receiver}(j,k,l)\right\rfloor\]
-\[K^{*}_{R} = \frac{2}{n^\prime(n^\prime-1)}\cdot \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n^\prime, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{receiver}(i, k, l) - D_{receiver}(j,k,l)\right\rfloor\]
+\[K^{*}_{R} = \sum\limits_{\substack{1 < i \leq n, \\ 1 \leq j < i, \\ 1 < k \leq n^\prime, \\ 1 \leq l < k}} \frac{2}{n(n-1)}\cdot\left\lfloor D_{receiver}(i, k, l) - D_{receiver}(j,k,l)\right\rfloor\]
 
+Again here, these formulas are not normalized. As for $K_S$ and $K_R$, the normalization coefficients were found numerically.
 %------------------------------------------------
 
 \section*{Additional Examples}
