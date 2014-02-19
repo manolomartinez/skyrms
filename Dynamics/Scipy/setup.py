@@ -11,9 +11,16 @@ class Strategies:
         self.states = np.arange(nstates)
         self.signals = np.arange(nsignals)
         self.acts = np.arange(nacts)
+        self.signalsprobs = np.identity(nsignals)
+        self.actsprobs = np.identity(nacts)
+        self.chances = np.array([1/nstates for i in self.states])
         self.senderstrategies = np.array(list(it.product(self.signals,
                                                          repeat=len(self.states))))
         self.receiverstrategies = np.array(list(it.product(self.acts,
+                                                           repeat=len(self.signals))))
+        self.senderstrategiesprobs = np.array(list(it.product(self.signalsprobs,
+                                                         repeat=len(self.states))))
+        self.receiverstrategiesprobs = np.array(list(it.product(self.actsprobs,
                                                            repeat=len(self.signals))))
         self.lrs = len(self.receiverstrategies)
         self.lss = len(self.senderstrategies)
@@ -235,6 +242,108 @@ class Nash:
         receiverisbest = abs(payoffreceiver -
                              max(self.receivers_vs_sender(sender))) < 1e-5
         return senderisbest and receiverisbest
+
+class Information:
+    """
+    Calculate mutual information between populations
+    """
+    def __init__(self, strats, popvector):
+        pops = np.array_split(popvector, 2)
+        self.sender = pops[0]
+        self.receiver = pops[1]
+        self.strats = strats
+        self.msg_cond_on_states, self.acts_cond_on_msg = self.population_to_mixed_strat()
+
+    def population_to_mixed_strat(self):
+        """
+        Take sender and receiver populations and output the overall sender and
+        receiver rules
+        """
+        mixedstratsender = self.strats.senderstrategiesprobs * self.sender[:,
+                                                                      np.newaxis,
+                                                                      np.newaxis]
+        mixedstratreceiver = self.strats.receiverstrategiesprobs * self.receiver[:,
+                                                                            np.newaxis,
+                                                                            np.newaxis]
+        return sum(mixedstratsender), sum(mixedstratreceiver)
+
+    def joint_states_messages(self):
+        return from_conditional_to_joint(self.strats.chances,
+                                         self.msg_cond_on_states)
+
+    def joint_messages_acts(self):
+        joint_s_m = self.joint_states_messages()
+        uncondmessages = sum(joint_s_m)
+        return from_conditional_to_joint(uncondmessages,
+                                         self.acts_cond_on_msg)
+
+    def joint_states_acts(self):
+        joint_s_m = self.joint_states_messages()
+        return joint_s_m.dot(self.acts_cond_on_msg)
+
+    def mutual_info_states_acts(self):
+        return mutual_info_from_joint(self.joint_states_acts())
+
+def conditional_entropy(conds, unconds):
+    """
+    Take a matrix of probabilities of the column random variable (r. v.)
+    conditional on the row r.v.; and a vector of unconditional
+    probabilities of the row r. v.. Calculate the conditional entropy of
+    column r. v. on row r. v. That is:
+    Input: 
+        [[P(B1|A1), ...., P(Bn|A1)],..., [P(B1|Am),...,P(Bn|Am)]]
+        [P(A1), ..., P(Am)]
+    Output: 
+        H(B|A)
+    """
+    return unconds.dot(np.apply_along_axis(entropy, 1, conds))
+
+def mutual_info_from_joint(matrix):
+    """ 
+    Take a matrix of joint probabilities and calculate the mutual information
+    between the row and column random variables
+    """
+    row_unconditionals = sum(matrix.transpose())
+    column_unconditionals = sum(matrix)
+    conditionals = from_joint_to_conditional(matrix)
+    uncond_entropy = entropy(column_unconditionals)
+    cond_entropy = conditional_entropy(conditionals, row_unconditionals)
+    return uncond_entropy - cond_entropy
+
+def unconditional_probabilities(unconditional_input, strategy):
+    """
+    Calculate the unconditional probability of messages for sender, or
+    signals for receiver, given the unconditional probability of states
+    (for sender) or of messages (for receiver)
+    """
+    return strategy * unconditional_input
+
+def from_joint_to_conditional(matrix):
+    """
+    Normalizes a matrix row-wise
+    """
+    return matrix/sum(matrix.transpose())
+
+def from_conditional_to_joint(unconds, conds):
+    """
+    Take a matrix of conditional probabilities of the column random variable on
+    the row r. v., and a vector of unconditional probabilities of the row r. v.
+    and output a matrix of joint probabilities.
+
+    Input: 
+            [[P(B1|A1), ...., P(Bn|A1)],..., [P(B1|Am),...,P(Bn|Am)]]
+            [P(A1), ..., P(Am)]
+    Output: 
+            [[P(B1,A1), ...., P(Bn,A1)],..., [P(B1,Am),...,P(Bn,Am)]]
+    """
+    return conds * unconds[..., None]
+
+def entropy(vector):
+    """
+    Calculate the entropy of a vector
+    """
+    nonzero = vector[vector > 1e-10]
+    return -nonzero.dot(np.log2(nonzero))
 
 
 def escalar_product_map(matrix, vector):
