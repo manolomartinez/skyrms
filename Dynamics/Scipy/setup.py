@@ -176,7 +176,7 @@ class Game:
         jac = np.hstack((lefthalf, righthalf))
         return jac.transpose()
 
-    def delta_X(self, X, t):
+    def delta_X(self, X):
         """
         Calculate a population vector for t' given the vector for t, using the
         discrete time replicator dynamics (Huttegger 2007)
@@ -188,10 +188,10 @@ class Game:
         avgfitnesssender = self.sender_avg_payoff(senderpops, receiverpops)
         avgfitnessreceiver = self.receiver_avg_payoff(receiverpops, senderpops)
         senderdelta = (self.senderpayoffs *
-                     senderpops[...,None]).dot(receiverpops).dot(self.mm_sender) / senderpops*avgfitnesssender
+                     senderpops[...,None]).dot(receiverpops).dot(self.mm_sender) / avgfitnesssender
         receiverdelta = (self.receiverpayoffs *
-                       receiverpops[...,None]).dot(senderpops).dot(self.mm_receiver) / receiverpops*avgfitnessreceiver
-        return np.concatenate((senderdot, receiverdot))
+                       receiverpops[...,None]).dot(senderpops).dot(self.mm_receiver) / avgfitnessreceiver
+        return np.concatenate((senderdelta, receiverdelta))
 
 class Nash:
     """
