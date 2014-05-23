@@ -40,6 +40,24 @@ def one_run_ode(game, sinit, rinit):
             data = [newdata]
     return data
 
+def one_run_discrete(game, popvector):
+    """
+    Calculate one run of <game> with starting population vector <popvector>
+    using the discrete time replicator dynamics
+    """
+    t = 0
+    tfinal = 1000
+    deltat = 1
+    while t < tfinal:
+        newpopvector = game.delta_X(popvector)
+        popvector = newpopvector
+        t += 1
+        try:
+            data = np.append(data, [popvector], axis=0)
+        except NameError:
+            data = [popvector]
+    return data
+
 def one_basin_mixed(game, trials):
     """
     Calculate evolutions for <trials> starting points
