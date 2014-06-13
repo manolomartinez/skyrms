@@ -28,7 +28,7 @@ def one_run_ode(game, sinit, rinit):
     """
     y0 = np.concatenate((sinit, rinit))
     t0 = 0
-    t1 = 1000
+    t1 = 100000
     dt = 1
     r = ode(game.dX_dt_ode, game.jacobian_ode).set_integrator('dopri5')
     r.set_initial_value(y0, t0)
@@ -48,14 +48,12 @@ def one_run_discrete(game, popvector):
     t = 0
     tfinal = 1000
     deltat = 1
+    data = [popvector]
     while t < tfinal:
         newpopvector = game.delta_X(popvector)
         popvector = newpopvector
         t += 1
-        try:
-            data = np.append(data, [popvector], axis=0)
-        except NameError:
-            data = [popvector]
+        data = np.append(data, [popvector], axis=0)
     return data
 
 def one_basin_mixed(game, trials):

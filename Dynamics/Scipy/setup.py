@@ -37,6 +37,16 @@ class Strategies:
         """
         return np.random.dirichlet([1 for i in np.arange(self.lrs)])
 
+class MixedStrategies(Strategies):
+    """
+    Construct a set of strategies that include mixed ones
+    """
+    def __init__(self, nstates, nsignals, nacts, increment):
+        """
+        <increment> gives the minimum weight (!=0) that a pure strat may have
+        in a mixed one
+        """
+        Strategies.__init__(nstates, nsignals, nacts)
 
 class Game:
     """
