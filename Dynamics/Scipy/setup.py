@@ -8,11 +8,11 @@ class Strategies:
     Construct strategies
     """
     def __init__(self, nstates, nsignals, nacts):
-        self.states = np.arange(nstates)
-        self.signals = np.arange(nsignals)
-        self.acts = np.arange(nacts)
-        self.signalsprobs = np.identity(nsignals)
-        self.actsprobs = np.identity(nacts)
+        self.states = int_or_list(nstates)
+        self.signals = int_or_list(nsignals)
+        self.acts = int_or_list(nacts)
+        self.signalsprobs = np.identity(len(self.signals))
+        self.actsprobs = np.identity(len(self.acts))
         self.chances = np.array([1/nstates for i in self.states])
         self.senderstrategies = np.array(list(it.product(self.signals,
                                                          repeat=len(self.states))))
@@ -37,6 +37,7 @@ class Strategies:
         """
         return np.random.dirichlet([1 for i in np.arange(self.lrs)])
 
+
 class MixedStrategies(Strategies):
     """
     Construct a set of strategies that include mixed ones
@@ -48,51 +49,65 @@ class MixedStrategies(Strategies):
         """
         Strategies.__init__(nstates, nsignals, nacts)
 
-class Game:
+
+class Random_Payoffs:
     """
-    Compute a game
+    Take a list of payoffs and a strats object and calculate a function that
+    gives the average payoff for sender and receiver strategies
     """
-    def __init__(self, payoffs, mutationrate, strats):
+    def __init__(self, payoffs, strats):
         self.payoffs = payoffs
         self.strats = strats
-        self.senderpayoffs = np.array([[
-            self.sender_avgpayoffs(i, j) for j in range(self.strats.lrs)] for i in
-            range(self.strats.lss)])
-        self.receiverpayoffs = np.array([[
-            self.receiver_avgpayoffs(j, i) for j in range(self.strats.lss)] for i in
-            range(self.strats.lrs)])
-        self.mm_sender = self.mutationmatrix(mutationrate, self.strats.lss)
-        self.mm_receiver = self.mutationmatrix(mutationrate, self.strats.lrs)
-
-
-    def mutationmatrix(self, mutation, dimension):
-        """
-        Calculate a (square) mutation matrix for the with mutation rate
-        given by <mutation> and dimension given by <dimension>
-        """
-        return np.array([[1 - mutation if i==j else mutation/(dimension - 1) for i in
-                               np.arange(dimension)] for j in
-                         np.arange(dimension)])
 
     def payoff(self, sender, receiver, state):
+        """
+        Return the payoff for strategies <sender> and <receiver> in <state> in
+        a list
+        """
         message = self.strats.senderstrategies[sender, state]
         act = self.strats.receiverstrategies[receiver, message]
-        return [self.payoffs[2 * (len(self.strats.acts) * state + act)],
-                self.payoffs[2 * (len(self.strats.acts) * state + act) + 1]]
+        return np.array(
+            [self.payoffs[2 * (len(self.strats.acts) * state + act)],
+                self.payoffs[2 * (len(self.strats.acts) * state + act) + 1]])
 
-    def sender_avgpayoffs(self, sender, receiver):
+    def avgpayoff(self, sender, receiver):
+        """
+        Return the average payoff for strategies <sender> and <receiver> in a
+        list
+        """
         return sum([1/len(self.strats.states) * self.payoff(
-            sender, receiver, state)[0] for state in self.strats.states])
+            sender, receiver, state) for state in self.strats.states])
 
-    def receiver_avgpayoffs(self, sender, receiver):
-        return sum([1/len(self.strats.states) * self.payoff(
-            sender, receiver, state)[1] for state in self.strats.states])
+
+class Game:
+    """
+    Compute a game from an avgpayoff function, a strats object,
+    and a mutation rate
+    """
+    def __init__(self, avgpayoff, strats, mutationrate=0):
+        self.strats = strats
+        payoffs = np.array([[
+            avgpayoff(i, j) for j in range(self.strats.lrs)] for i in
+            range(self.strats.lss)])
+        self.senderpayoffs = payoffs[:, :, 0]
+        self.receiverpayoffs = payoffs[:, :, 1].T
+        self.mm_sender = self.mutationmatrix(mutationrate, self.strats.lss)
+        self.mm_receiver = self.mutationmatrix(mutationrate, self.strats.lrs)
 
     def sender_avg_payoff(self, sender, receiver):
         return sender.dot(self.senderpayoffs.dot(receiver))
 
     def receiver_avg_payoff(self, receiver, sender):
         return receiver.dot(self.receiverpayoffs.dot(sender))
+
+    def mutationmatrix(self, mutation, dimension):
+        """
+        Calculate a (square) mutation matrix for the with mutation rate
+        given by <mutation> and dimension given by <dimension>
+        """
+        return np.array([[1 - mutation if i == j else mutation/(dimension - 1)
+                          for i in np.arange(dimension)] for j in
+                         np.arange(dimension)])
 
     def dX_dt(self, X, t):
         """
@@ -108,9 +123,13 @@ class Game:
         avgfitnesssender = self.sender_avg_payoff(senderpops, receiverpops)
         avgfitnessreceiver = self.receiver_avg_payoff(receiverpops, senderpops)
         senderdot = (self.senderpayoffs *
-                     senderpops[...,None]).dot(receiverpops).dot(self.mm_sender) - senderpops*avgfitnesssender
+                     senderpops[..., None]).dot(
+                         receiverpops).dot(
+                             self.mm_sender) - senderpops*avgfitnesssender
         receiverdot = (self.receiverpayoffs *
-                       receiverpops[...,None]).dot(senderpops).dot(self.mm_receiver) - receiverpops*avgfitnessreceiver
+                       receiverpops[..., None]).dot(
+                           senderpops).dot(
+                               self.mm_receiver) - receiverpops * avgfitnessreceiver
         return np.concatenate((senderdot, receiverdot))
 
     def dX_dt_ode(self, t, X):
@@ -133,7 +152,7 @@ class Game:
         return np.concatenate((senderdot, receiverdot))
 
     def jacobian(self, X, t=0):
-        """ 
+        """
         Calculate the Jacobian of the system for scipy.integrate.odeint
         """
         # X's first half is the sender vector
@@ -341,3 +360,12 @@ def escalar_product_map(matrix, vector):
     """
     trm = matrix.transpose()
     return np.vectorize(np.dot)(trm, vector).transpose()
+
+
+def int_or_list(intorlist):
+    whatisit = type(intorlist)
+    if whatisit == int:
+        return np.arange(intorlist)
+    if whatisit == list:
+        return intorlist
+
