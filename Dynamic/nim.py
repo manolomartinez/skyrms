@@ -1,11 +1,22 @@
 import numpy as np
 
+
+def coarse_investments(maximum, strats, weights):
+    """
+    Create mixed strategies with <strats> strat choices and <weights> possible
+    weights for pure strats.
+    Here we are not looking for probability vectors: sum should be <= 1
+    """
+    return np.concatenate(
+        [n_in_m(total, strats, weights) for total in weights])
+
+
 def n_in_m(total, strats, weights):
     """
     Create mixed strategies with <strats> strat choices and <weights> possible
     weights for pure strats.
     """
-    if strats==1:
+    if strats == 1:
         return np.array([[total]])
     else:
         relevant_weights = [weight for weight in weights if weight <= total]
@@ -23,5 +34,3 @@ def conc_element(elem, array):
     col = array.shape[0]
     elem_vector = elem * np.ones((col, 1))
     return np.concatenate((elem_vector, array), axis=1)
-
-
