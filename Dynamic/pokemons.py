@@ -2,11 +2,6 @@
 Library for the paper "Signalling games and modality"
 """
 
-import sys
-
-sys.path.append(
-    "/home/manolo/Filosofía/Writings/Papers/Common Interest/Dynamics/Scipy")
-
 import setup as s
 
 
