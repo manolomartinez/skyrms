@@ -366,6 +366,5 @@ def int_or_list(intorlist):
     whatisit = type(intorlist)
     if whatisit == int:
         return np.arange(intorlist)
-    if whatisit == list:
+    if whatisit == np.ndarray:
         return intorlist
-
