@@ -27,6 +27,7 @@ class MainGame(s.Strategies):
         self.probs = [0.2, 0.2, 0.3, 0.3]  # The probs of air monster, sea
         self.probair = self.probs[0] / (self.probs[0] + self.probs[1])
         self.probsea = self.probs[1] / (self.probs[0] + self.probs[1])
+        self.probundefined = 1 - self.probair - self.probsea
         self.probtoair = self.probs[2] / (self.probs[2] + self.probs[3])
         self.probtosea = self.probs[3] / (self.probs[2] + self.probs[3])
         # monster, undefined to air monster and to sea monster
@@ -83,13 +84,13 @@ class MainGame(s.Strategies):
         toairmonster = self.payoff(sender, receiver, 2, 0)
         toseamonster = self.payoff(sender, receiver, 2, 1)
         avgpoff = (
-            1/6 * airmonster + 1/6 * seamonster + 2/3 * toairmonster + 2/3
-            * toseamonster)
-        return [avgpoff, avgpoff]
+            self.probs[0] * airmonster + self.probs[1] * seamonster +
+            self.probs[2] * toairmonster + self.probs[3] * toseamonster)
+        return [avgpoff, avgpoff]  # Perfect common interest
 
 
 def pay(cost):
     """
-    A diminishing-returns pay function
+    The function that takes investment to payoff
     """
     return 5 * (1 + cost)
