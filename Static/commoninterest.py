@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 
 import itertools
+import json
 import math
+import pdb
 import random
 import subprocess
 
@@ -14,11 +16,14 @@ class Game:
         self.payoffs = payoffs
         self.sender, self.receiver = fromlisttomatrix(
             self.payoffs, self.dimension)
-        self.cistar = round(self.aggregate_ci_star(), 2)
-        self.kendalldistance = round(self. aggregate_kendall_distance(), 2)
-        self.kendalldistances = self.aggregate_kendall_distance_distances()
-        self.kendallsender, self.kendallreceiver = self.intrakendall()
-        self.starsender, self.starreceiver = self.intrakendallstar()
+        self.cistar = round(self.aggregate_ci_star(0), 2)
+        self.kendalldistance = round(self. aggregate_kendall_distance(0), 2)
+        # this is C_nostar
+        #self.kendallsender, self.kendallreceiver = self.intrakendall(0)
+        self.starsender, self.starreceiver = self.intrakendallstar(0)
+        self.purestrats = [[1,0,0], [0,1,0], [0,0,1]]
+        self.wholepurestrats = [list(i) for i in itertools.product(self.purestrats,
+                              repeat=self.dimension)]
 
     def same_best(self):
         bestactsforsender = [
@@ -30,13 +35,13 @@ class Game:
             zip(bestactsforsender, bestactsforreceiver)]
         return samebest
 
-    def intrakendallstar(self):
+    def intrakendallstar(self, tievalue):
         def kendall(state1, state2):
             state1plusmean = state1 + [sum(state1)/len(state1)]
             state2plusmean = state2 + [sum(state2)/len(state2)]
             return sum(
                 [points(
-                    state1plusmean, state2plusmean, pair[0], pair[1])
+                    state1plusmean, state2plusmean, pair[0], pair[1], tievalue)
                     for pair in itertools.combinations(
                         range(self.dimension + 1), 2)])
         skendalls = [kendall(
@@ -49,38 +54,39 @@ class Game:
             skendalls)/len(skendalls), 2), round(
                 sum(rkendalls)/len(rkendalls), 2)
 
-    def intrakendall(self):
+    def intrakendall(self, tievalue):
         def kendall(state1, state2):
-            return sum([points(state1, state2, pair[0], pair[1]) for pair in
+            return sum([points(state1, state2, pair[0], pair[1], tievalue) for pair in
                         itertools.combinations(range(self.dimension), 2)])
         skendalls = [kendall(self.sender[pair[0]], self.sender[pair[1]]) for
             pair in itertools.combinations(range(self.dimension), 2)]
         rkendalls = [kendall(self.receiver[pair[0]], self.receiver[pair[1]]) for
             pair in itertools.combinations(range(self.dimension), 2)]
-        return sum(skendalls)/len(skendalls), sum(rkendalls)/len(rkendalls)
+        return round(sum(skendalls)/len(skendalls),2), round(sum(rkendalls)/len(rkendalls), 2)
 
-    def aggregate_kendall_distance(self):
-        return sum([self.chances[state] * self.kendall_tau_distance(state) for state in
-            range(self.dimension)])
+    def aggregate_kendall_distance(self, tievalue):
+        return sum(
+            [self.chances[state] * self.kendall_tau_distance(state, tievalue) for state in range(self.dimension)])
 
-    def kendall_tau_distance(self, state):
+    def kendall_tau_distance(self, state, tievalue):
         kendall =  sum([points(self.sender[state], self.receiver[state],
-            pair[0], pair[1]) for pair in
+            pair[0], pair[1], tievalue) for pair in
             itertools.combinations(range(self.dimension), 2)])
         return kendall
 
-    def aggregate_ci_star(self):
-        return sum([self.chances[state] * self.common_interest_star(state) for
+    def aggregate_ci_star(self, tievalue):
+        return sum([self.chances[state] * self.common_interest_star(state,
+                                                                    tievalue) for
             state in range(self.dimension)])
         #return [self.common_interest_star(state) for state in
                 #range(self.dimension)]
 
-    def common_interest_star(self, state):
+    def common_interest_star(self, state, tievalue):
         senderplusmean = self.sender[state] + [sum(self.sender[state])/len(self.sender[state])]
         receiverplusmean = self.receiver[state] + [sum(self.receiver[state])/len(self.receiver[state])]
         #print(senderplusmean, receiverplusmean)
         kendall =  sum([points(senderplusmean, receiverplusmean,
-            pair[0], pair[1]) for pair in
+            pair[0], pair[1], tievalue) for pair in
             itertools.combinations(range(self.dimension + 1), 2)])
         return kendall
 
@@ -102,9 +108,18 @@ class Game:
         else:
             return distance
 
+    def just_equilibria(self):
+        gambitgame = bytes(self.write_efg(), "utf-8")
+        calc_eqs = subprocess.Popen(['gambit-lcp', '-d', '3', '-q'], stdin = subprocess.PIPE,
+        #calc_eqs = subprocess.Popen(['gambit-lcp'], stdin = subprocess.PIPE,
+                stdout = subprocess.PIPE)
+        result = calc_eqs.communicate(input = gambitgame)[0]
+        equilibria = str(result, "utf-8").split("\n")[:-1]
+        return equilibria
+
     def info_in_equilibria(self):
         gambitgame = bytes(self.write_efg(), "utf-8")
-        calc_eqs = subprocess.Popen(['gambit-lcp', '-d', '3'], stdin = subprocess.PIPE,
+        calc_eqs = subprocess.Popen(['gambit-lcp', '-d', '3', '-q'], stdin = subprocess.PIPE,
         #calc_eqs = subprocess.Popen(['gambit-lcp'], stdin = subprocess.PIPE,
                 stdout = subprocess.PIPE)
         result = calc_eqs.communicate(input = gambitgame)[0]
@@ -187,8 +202,8 @@ class Game:
             # The following takes a line such as "NE, 0, 0, 1, 0, 0, 1..." to a list [0, 0, 1, 0, 0, 1...]
             equilibrium = list(map(eval, line.split(sep =",")[1:]))
             mutualinfoSM, mutualinfoAM, mutualinfoSA = self.conditional_probabilities(equilibrium)
-            if pure_strategy(equilibrium) and mutualinfoSA > 10e-6:
-                print(self.payoffs, equilibrium)
+            #if pure_strategy(equilibrium) and mutualinfoSA > 10e-6:
+                #print(self.payoffs, equilibrium)
             #print(mutualinfoSA)
             sinfos.append(mutualinfoSM)
             rinfos.append(mutualinfoAM)
@@ -328,25 +343,76 @@ class Game:
         #print("chances", self.chances)
 
         mutualinfoSA = sum([jointprobSA[act][state] *
-            safe_log(jointprobSA[act][state], unconditionalsacts[act] *
-                self.chances[state]) for act in range(self.dimension) for state in range(self.dimension)])
+                            safe_log(jointprobSA[act][
+                                state], unconditionalsacts[act] * self.chances[
+                                    state])
+                            for act in range(self.dimension)
+                            for state in range(self.dimension)])
 
         #print("MutualInfo SA", mutualinfoSA)
 
-
         return(mutualinfoSM, mutualinfoAM, mutualinfoSA)
+
+    def expected_payoff(self, sstrat, rstrat):
+        iterdim = range(self.dimension)
+        senderep = sum([sum([sstrat[state][message] * sum([rstrat[message][act] *
+            self.sender[state][act] for act in iterdim])
+            for message in iterdim]) for state in iterdim])/self.dimension 
+        receiverep = sum([sum([sstrat[state][message] * sum([rstrat[message][act] *
+            self.receiver[state][act] for act in iterdim])
+            for message in iterdim]) for state in iterdim])/self.dimension 
+        return senderep, receiverep
+
+    def best_response_sender(self, rstrat):
+        epayoffs = []
+        for strat in self.wholepurestrats:
+            epayoffs.append(self.expected_payoff(strat, rstrat)[0])
+        maxep = max(epayoffs)
+        brs = []
+        for i in range(len(epayoffs)):
+            if epayoffs[i] == maxep:
+                brs.append(self.wholepurestrats[i])
+        return brs
+
+    def best_response_receiver(self, sstrat):
+        epayoffs = []
+        for strat in self.wholepurestrats:
+            epayoffs.append(self.expected_payoff(sstrat, strat)[1])
+        maxep = max(epayoffs)
+        brs = []
+        for i in range(len(epayoffs)):
+            if epayoffs[i] == maxep:
+                brs.append(self.wholepurestrats[i])
+        return brs
+
+    def pure_strat_Nash(self):
+        brstosender = {str(strat):self.best_response_receiver(strat) for strat in
+                       self.wholepurestrats}
+        brstoreceiver = {str(strat):self.best_response_sender(strat) for strat in
+                       self.wholepurestrats}
+        Nash = []
+        for pair in itertools.product(self.wholepurestrats, repeat=2):
+            if pair[1] in brstosender[str(pair[0])] and pair[0] in brstoreceiver[str(pair[1])]:
+                Nash.append(pair)
+        return Nash
+
+
+
+
 
 def safe_kld_coefficient(conditional, unconditional):
                 if conditional == 0 or unconditional == 0:
                     return 0
                 else:
-                    return  conditional * math.log2(conditional/unconditional)
+                    return conditional * math.log2(conditional/unconditional)
+
 
 def safe_log(a, b):
     try:
-        return math.log2(safe_div(a,b))
+        return math.log2(safe_div(a, b))
     except ValueError:
         return 0
+
 
 def safe_div(a, b):
     try:
@@ -354,39 +420,91 @@ def safe_div(a, b):
     except ZeroDivisionError:
         return 0
 
+
 def entropy(unconditional_probs):
-    return sum([element * math.log2(1/element) for element in
-        unconditional_probs])
+    return sum([element * math.log2(1/element)
+                for element in unconditional_probs])
+
+#def conditional_entropy(unconditional_probs, conditional_probs):
+
+
+
+def safe_kld_coefficient(conditional, unconditional):
+                if conditional == 0 or unconditional == 0:
+                    return 0
+                else:
+                    return conditional * math.log2(conditional/unconditional)
+
+
+def safe_log(a, b):
+    try:
+        return math.log2(safe_div(a, b))
+    except ValueError:
+        return 0
+
+
+def safe_div(a, b):
+    try:
+        return a/b
+    except ZeroDivisionError:
+        return 0
+
+
+def entropy(unconditional_probs):
+    return sum([element * math.log2(1/element)
+                for element in unconditional_probs])
 
 #def conditional_entropy(unconditional_probs, conditional_probs):
     #return -1 * sum([ unconditional_probs[unconditional] *
         #sum(conditional_probs[conditional][unconditional] *
             #math.log2(1/conditional_probs[conditional][unconditional])))
 
+
 def order_indexes(preferences):
     return [i[0] for i in sorted(enumerate(preferences), key=lambda x:x[1])]
 
+
 def avg(alist):
-    return round(sum(alist)/len(alist),2)
+    return round(sum(alist)/len(alist), 2)
+
 
 def avg_abs_dev(alist):
     return sum([abs(element - avg(alist)) for element in alist])/len(alist)
 
-def payoffs(dimension): # The payoff matrix, as a list
+
+def payoffs(dimension):  # The payoff matrix, as a list
     return [random.randrange(100) for x in range(dimension*dimension*2)]
 
-def fromlisttomatrix(payoff, dimension): # Takes a list of intertwined sender and receiver
+def cs_payoffs(dimension): # A constant-sum game
+    def cs(pie):
+        sender = safe_randrange(pie)
+        receiver = pie - sender
+        return sender, receiver
+    pies = [random.randrange(100) for x in range(dimension)]
+    payoffs = [[cs(pie) for x in range(dimension)] for pie in pies]
+    return [item for state in payoffs for pair in state for item in pair]
+
+def safe_randrange(value):
+    try:
+        return random.randrange(value)
+    except ValueError:
+        return 0
+
+
+def fromlisttomatrix(payoff, dimension):
+    # Takes a list of intertwined sender and receiver
     # payoffs (what payoffs() outputs) and outputs two lists of lists.
-    sender = [payoff[i] for i in range(0,len(payoff),2)]
-    sendermatrix = [sender[i:i + dimension] for i in range(0, len(sender),
-        dimension)]
-    receiver = [payoff[i] for i in range(1,len(payoff),2)]
-    receivermatrix = [receiver[i:i+dimension] for i in range(0, len(receiver),
-        dimension)]
+    sender = [payoff[i] for i in range(0, len(payoff), 2)]
+    sendermatrix = [sender[i:i + dimension]
+                    for i in range(0, len(sender), dimension)]
+    receiver = [payoff[i] for i in range(1, len(payoff), 2)]
+    receivermatrix = [receiver[i:i+dimension]
+                      for i in range(0, len(receiver), dimension)]
     return sendermatrix, receivermatrix
 
 
-def preferable(ranking, element1, element2): # returns 0 if element1 is
+def preferable(ranking, element1, element2):
+    # returns 0 if element1 is
     # preferable; 0.5 if both equally preferable; 1 if element2 is preferable
     index1 = ranking[element1]
     index2 = ranking[element2]
@@ -398,18 +516,29 @@ def preferable(ranking, element1, element2): # returns 0 if element1 is
         return 1
 
 
-def points(state1, state2, element1, element2):
+def points(state1, state2, element1, element2, tievalue):
     #pairwise = math.floor(
         #abs(preferable(state1, element1, element2) -
             #preferable(state2, element1, element2)))
     pairwise = abs(preferable(state1, element1, element2)
                    - preferable(state2, element1, element2))
+    if pairwise == 0.5:
+        return tievalue
+    else:
+        return pairwise
+
+def points2(state1, state2, element1, element2):
+    pairwise = math.floor(
+        abs(preferable(state1, element1, element2) -
+            preferable(state2, element1, element2)))
     return pairwise
 
 
 def setofindexes(originallist, element):
-    return set([i for i in range(len(originallist)) if originallist[i] ==
-        element]) # We return sets -- later we are doing intersections
+    return set([i for i in range(len(originallist))
+                if originallist[i] ==
+                element])  # We return sets -- later we are doing intersections
+
 
 def normalize_vector(vector):
     bottom = min(vector)
@@ -417,22 +546,27 @@ def normalize_vector(vector):
     if top != bottom:
         normalized = [(element - bottom)/(top - bottom) for element in vector]
     else:
-        normalized  = [0.5 for i in range(len(vector))]
+        normalized = [0.5 for i in range(len(vector))]
     return normalized
 
+
 def normalize_matrix(matrix):
-    flatmatrix = [i for i in itertools.chain.from_iterable(matrix)] # what's
+    flatmatrix = [i for i in itertools.chain.from_iterable(matrix)]  # what's
     # the right way to do this?
     bottom = min(flatmatrix)
     top = max(flatmatrix)
-    return [[(element - bottom)/(top - bottom) for element in row] for row in matrix]
+    return [[(element - bottom)/(top - bottom)
+             for element in row] for row in matrix]
+
 
 def order_list(alist):
     olist = sorted(alist, reverse=True)
     return [olist.index(element) for element in alist]
 
+
 def pure_strategy(equilibrium):
     return all([weight > 0.99 or weight < 0.01 for weight in equilibrium])
+
 
 def generate_30game():
     sender = []
@@ -449,7 +583,7 @@ def generate_30game():
         rmax = max(oreceiver[i])
         rmin = min(oreceiver[i])
         oreceiver[i][oreceiver[i].index(rmax)] = 3
-        oreceiver[i][oreceiver[i].index(rmin)]= 2
+        oreceiver[i][oreceiver[i].index(rmin)] = 2
         oreceiver[i][oreceiver[i].index(3)] = 0
         state = [random.randrange(100) for j in range(3)]
         while order_list(state) != oreceiver[i]:
@@ -461,17 +595,14 @@ def generate_30game():
 
 def how_many_kendalls(dimension):
     kendallsender = []
-    for i in range(1000000):
+    for i in range(50000000):
+        if i/1000 == int(i/1000):
+            print(i)
         payoff = payoffs(dimension)
         game = Game(payoff)
         pair = [game.cistar, game.starsender]
         if pair not in kendallsender:
             kendallsender.append(pair)
-    #with open("sender", "w") as examples:
-    #    if sorted(kendallssender) == sorted(kendallsreceiver):
-    #        print("yes")
-    #        examples.write(str(sorted(kendallssender)))
-    #        return sorted(kendallssender), []
-    #    else:
-    #        print("no")
+    with open("sender", "w") as examples:
+        json.dump(sorted(kendallsender), examples)
     return kendallsender
