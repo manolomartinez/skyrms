@@ -57,8 +57,8 @@ class MainGame(s.Strategies):
         """
         firstmessage = int(self.senderstrategies[sender][initialstate])
         firstresponse = np.array(
-            self.receiverstrategies[receiver][firstmessage], np.int32)
-        firstr = firstresponse[0]
+            self.receiverstrategies[receiver][firstmessage])
+        firstr = int(firstresponse[0])
         if firstr == 2:
             costair = firstresponse[1]
             costsea = firstresponse[2]
