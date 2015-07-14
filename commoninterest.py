@@ -19,7 +19,7 @@ class Game:
         self.cistar = round(self.aggregate_ci_star(0), 2)
         self.kendalldistance = round(self. aggregate_kendall_distance(0), 2)
         # this is C_nostar
-        #self.kendallsender, self.kendallreceiver = self.intrakendall(0)
+        self.kendallsender, self.kendallreceiver = self.intrakendall(0)
         self.starsender, self.starreceiver = self.intrakendallstar(0)
         self.purestrats = [[1,0,0], [0,1,0], [0,0,1]]
         self.wholepurestrats = [list(i) for i in itertools.product(self.purestrats,
