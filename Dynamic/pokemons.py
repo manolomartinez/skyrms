@@ -93,4 +93,32 @@ def pay(cost):
     """
     The function that takes investment to payoff
     """
-    return 5 * (1 + cost)
+    # return 5 * (1 + cost)
+    return 10 - 5/(np.e ** (5 * cost))
+
+
+def sorted_pop(strats, weights):
+    """
+    Take a set of strategies, and a vector with weights, and sort the former
+    set by the latter weights
+    """
+    strtype = type(strats[0])
+    wtype = type(weights[0])
+    sw_list = [(strat, weight) for strat, weight in zip(strats, weights)]
+    dtype = [('strat', strtype), ('weight', wtype)]
+    print(dtype)
+    structured_pop = np.array(sw_list, dtype=dtype)
+    print(structured_pop)
+    return np.sort(structured_pop, order='weight')
+
+
+def sorted_pops(pops, maingame):
+    """
+    Take a population as returned by calculatons.one_run_*() and return two
+    ordered arrays, as calculated by sorted_pop()
+    """
+    sender = pops[:maingame.lss]
+    receiver = pops[maingame.lss:]
+    sorted_sender = sorted_pop(maingame.senderstrategies, sender)
+    sorted_receiver = sorted_pop(maingame.receiverstrategies, receiver)
+    return sorted_sender, sorted_receiver
