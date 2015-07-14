@@ -70,8 +70,8 @@ class MainGame(s.Strategies):
         else:
             secondmessage = int(self.senderstrategies[sender][secondstate])
             secondresponse = np.array(
-                self.receiverstrategies[receiver][secondmessage], np.int32)
-            secondr = secondresponse[0]
+                self.receiverstrategies[receiver][secondmessage])
+            secondr = int(secondresponse[0])
             return self.payoff2ndround(
                 costair, costsea, cost)[secondstate][secondr]
 
