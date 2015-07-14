@@ -41,7 +41,26 @@ def withintraplotsender(filename):
     ax.set_ylabel('sender variability')
     plt.title("proportion of games in sample with at least one information-using equilibrium")
     plt.show()
-    
+
+def withintraplotreceiver(filename):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection="3d")
+    xs = array.array('f')
+    ys = array.array('f')
+    zs = array.array('f')
+    ss = array.array('f')
+    with open(filename, 'r') as datapoints:
+        for line in datapoints.readlines():
+            points = [eval(word) for word in line.split()]
+            xs.append(points[0])
+            ys.append(points[1])
+            zs.append(points[4])
+    ax.plot_wireframe(xs, ys, zs, rstride=0.33, cstride=0.5)
+    ax.set_xlabel('common interest')
+    ax.set_ylabel('receiver variability')
+    plt.title("proportion of games in sample with at least one information-using equilibrium")
+    plt.show()
+   
    
 
 def proportion(filename):
