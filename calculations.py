@@ -44,12 +44,13 @@ def one_run_ode(game, sinit, rinit):
     return data
 
 
-def one_run_discrete(game, popvector, t0=0, tfinal=1000, tstep=1):
+def one_run_discrete(game, sinit, rinit, t0=0, tfinal=1000, tstep=1):
     """
     Calculate one run of <game> with starting population vector <popvector>
     using the discrete time replicator dynamics
     """
     t = t0
+    popvector = np.concatenate((sinit, rinit))
     data = [popvector]
     while t < tfinal:
         newpopvector = game.delta_X(popvector)
