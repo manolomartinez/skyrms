@@ -49,6 +49,7 @@ def mutual_info_batch(inputdirs, newdir):
         inputdirs = [inputdirs]
     datadirs = os.listdir(inputdirs[0]) # Any of them will do (they are
     # parallel)
+    print(datadirs)
     os.mkdir(os.path.join(basedir, newdir))
     for ddir in datadirs:
         print(ddir, '...')
@@ -144,7 +145,7 @@ def mutual_info_avgs_per_file(gamefile):
         results = evols.readlines()
         evolslist = np.array([eval(evol) for evol in results])
         print(len(evolslist))
-        percentage_mi = len(evolslist[evolslist > 1e-10])/len(evolslist)
+        percentage_mi = len(evolslist[evolslist > 1e-03])/len(evolslist)
         avg_mi = np.average(evolslist)
     return percentage_mi, avg_mi, max(evolslist), min(evolslist)
 
