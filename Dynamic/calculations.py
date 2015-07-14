@@ -15,13 +15,13 @@ t = np.arange(1001)
 #     36, 47, 59, 62, 77, 24, 34], 0.01, strat)
 
 
-def one_run_odeint(game, sinit, rinit, *args):
+def one_run_odeint(game, sinit, rinit, **kwargs):
     """
     Calculate one run of <game> with starting points sinit and rinit
     using scipy.integrate.odeint
     """
     return odeint(game.dX_dt, np.concatenate((sinit, rinit)), t,
-                  Dfun=game.jacobian, col_deriv=True, *args)
+                  Dfun=game.jacobian, col_deriv=True, **kwargs)
 
 
 def one_run_ode(game, sinit, rinit):
@@ -44,18 +44,17 @@ def one_run_ode(game, sinit, rinit):
     return data
 
 
-def one_run_discrete(game, popvector):
+def one_run_discrete(game, popvector, t0=0, tfinal=1000, tstep=1):
     """
     Calculate one run of <game> with starting population vector <popvector>
     using the discrete time replicator dynamics
     """
-    t = 0
-    tfinal = 1000
+    t = t0
     data = [popvector]
     while t < tfinal:
         newpopvector = game.delta_X(popvector)
         popvector = newpopvector
-        t += 1
+        t += tstep
         data = np.append(data, [popvector], axis=0)
     return data
 
