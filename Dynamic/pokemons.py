@@ -13,24 +13,24 @@ class MainGame(s.Strategies):
     Calculate the main game
     """
 
-    def __init__(self):
-        investments = nim.coarse_investments(1, 2, [0, 0.25, 0.5, 0.75, 1])
+    def __init__(self, probs=[0.2, 0.2, 0.3, 0.3]):
+        investments = nim.coarse_investments(1, 2, [0, 1])
         preparetable = np.insert(investments, 0, 2, axis=1)
         attacks = np.array([[0, 0, 0], [1, 0, 0]])
         acts = np.concatenate((attacks, preparetable))
         s.Strategies.__init__(self, 3, 3, acts)
-        self.unpair = 0  # the unprepared air attack is equivalent investing
+        self.unpair = 0  # the unprepared air attack is equivalent to investing
         # this amount in preparation
         self.unpsea = 0  # ditto for the unprepared sea attack
         self.loseair = 0  # the payoff of losing against the air monster
         self.losesea = 0  # ditto for the sea monster
-        self.probs = [0.2, 0.2, 0.3, 0.3]  # The probs of air monster, sea
+        self.probs = probs  # The probs of air monster, sea
+        # monster, undefined to air monster and to sea monster
         self.probair = self.probs[0] / (self.probs[0] + self.probs[1])
         self.probsea = self.probs[1] / (self.probs[0] + self.probs[1])
         self.probundefined = 1 - self.probair - self.probsea
         self.probtoair = self.probs[2] / (self.probs[2] + self.probs[3])
         self.probtosea = self.probs[3] / (self.probs[2] + self.probs[3])
-        # monster, undefined to air monster and to sea monster
 
     def payoff1stround(self, cost):
         """
