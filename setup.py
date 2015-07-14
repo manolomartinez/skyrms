@@ -5,7 +5,8 @@ np.set_printoptions(precision=4)
 
 class Strategies:
     """
-    Construct strategies
+    Construct a sort of template for games with <nstates> states, <nsignals>
+    signals and <nacts> acts
     """
     def __init__(self, nstates, nsignals, nacts):
         self.states = int_or_list(nstates)
@@ -50,7 +51,7 @@ class MixedStrategies(Strategies):
         Strategies.__init__(nstates, nsignals, nacts)
 
 
-class Random_Payoffs:
+class Payoffs_Functions:
     """
     Take a list of payoffs and a strats object and calculate a function that
     gives the average payoff for sender and receiver strategies
