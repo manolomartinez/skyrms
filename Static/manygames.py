@@ -472,3 +472,71 @@ def findgames_Cnostar(dimension, nofgames):
             pickle.dump(games, pp)
 
 
+def findjustgames_Cnostar(dimension, nofgames):
+    """
+    Find <nofgames> square games of <dimension>
+    with each value of C. Do not calculate equilibria for the games
+    """
+    try:
+        with open("pickledoutcs", "rb") as pp:
+            outstanding_cs = pickle.load(pp)
+        with open("pickledcs", "rb") as pp:
+            possible_cs = pickle.load(pp)
+        with open("pickledgames", "rb") as pp:
+            games = pickle.load(pp)
+    except FileNotFoundError:
+        possible_cs = []
+        outstanding_cs = []
+        games = {}
+        game = ci.Game(ci.payoffs(dimension))
+        gamec = game.kendalldistance
+        if gamec not in possible_cs:
+            possible_cs.append(gamec)
+            outstanding_cs.append(gamec)
+            games[str(gamec)] = []
+            games[str(gamec)].append(str(game.payoffs))
+    timestr = time.strftime("%d%b%H-%M")
+    try:
+        while outstanding_cs != []:
+            game = ci.Game(ci.payoffs(dimension))
+            gamec = game.kendalldistance
+            if gamec not in possible_cs or gamec in outstanding_cs:
+                if gamec not in possible_cs:
+                    possible_cs.append(gamec)
+                    outstanding_cs.append(gamec)
+                    games[str(gamec)] = []
+                for c in possible_cs:
+                    if gamec == c:
+                        games[str(gamec)].append(str(game.payoffs))
+                        print("c", c, len(games[str(c)]))
+                        if len(games[str(c)]) > nofgames:
+                            outstanding_cs.remove(c)
+                            print("c", c, "done.")
+                            filename = ''.join(["c", str(c), timestr])
+                            with open(filename, 'w') as cs:
+                                json.dump(games[str(c)], cs)
+        with open("pickledoutcs", "wb") as pp:
+            pickle.dump(outstanding_cs, pp)
+        with open("pickledcs", "wb") as pp:
+            pickle.dump(possible_cs, pp)
+        with open("pickledgames", "wb") as pp:
+            pickle.dump(games, pp)
+    except KeyboardInterrupt:
+        with open("pickledoutcs", "wb") as pp:
+            pickle.dump(outstanding_cs, pp)
+        with open("pickledcs", "wb") as pp:
+            pickle.dump(possible_cs, pp)
+        with open("pickledgames", "wb") as pp:
+            pickle.dump(games, pp)
+
+
+def list_constant_sum(number, dimension, filename):
+    """
+    Create a list of <number> square constant sum games of <dimension> and save
+    them in <filename>
+    """
+    with open(filename, 'w') as outputfile:
+        for _ in range(number):
+            payoffs = cg.create_constant_sum(dimension)
+            outputfile.write("{}\n".format(str(payoffs)))
+
