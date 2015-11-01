@@ -1,5 +1,7 @@
+"""
+Actually solve the differentials/difference equations
+"""
 import setup as s
-import numpy as np
 from scipy.integrate import odeint
 from scipy.integrate import ode
 import json
@@ -8,20 +10,21 @@ import pickle
 import multiprocessing
 import itertools as it
 
-t = np.arange(1001)
+# t = s.np.arange(1001)
 # strat = s.Strategies(2,2,2)
 # game = s.Game(
 #    [63, 67, 10, 19, 8, 4, 4, 31, 40, 35, 92,
 #     36, 47, 59, 62, 77, 24, 34], 0.01, strat)
 
 
-def one_run_odeint(game, sinit, rinit, **kwargs):
+def one_run_odeint(game, sinit, rinit, times, **kwargs):
     """
-    Calculate one run of <game> with starting points sinit and rinit
-    using scipy.integrate.odeint
+    Calculate one run of the setup.Evolve object <game>, with starting points
+    sinit and rinit, in times t, using scipy.integrate.odeint
     """
-    return odeint(game.dX_dt, np.concatenate((sinit, rinit)), t,
-                  Dfun=game.jacobian, col_deriv=True, **kwargs)
+    return odeint(
+        game.replicator_dX_dt, s.np.concatenate((sinit, rinit)), times,
+        Dfun=game.replicator_jacobian, col_deriv=True, **kwargs)
 
 
 def one_run_ode(game, sinit, rinit):
@@ -29,34 +32,35 @@ def one_run_ode(game, sinit, rinit):
     Calculate one run of <game> with starting points sinit and rinit
     using scipy.integrate.ode
     """
-    y0 = np.concatenate((sinit, rinit))
-    t0 = 0
-    t1 = 1000
-    dt = 1
-    r = ode(game.dX_dt_ode, game.jacobian_ode).set_integrator('dopri5')
-    r.set_initial_value(y0, t0)
-    while r.successful() and r.t < t1:
-        newdata = r.integrate(r.t+dt)
+    initialpop = s.np.concatenate((sinit, rinit))
+    initialtime = 0
+    finaltime = 1000
+    timeinc = 1
+    equations = ode(game.replicator_dX_dt_ode,
+                    game.replicator_jacobian_ode).set_integrator('dopri5')
+    equations.set_initial_value(initialpop, initialtime)
+    while equations.successful() and equations.t < finaltime:
+        newdata = equations.integrate(equations.t + timeinc)
         try:
-            data = np.append(data, [newdata], axis=0)
+            data = s.np.append(data, [newdata], axis=0)
         except NameError:
             data = [newdata]
     return data
 
 
-def one_run_discrete(game, sinit, rinit, t0=0, tfinal=1000, tstep=1):
+def one_run_discrete(game, sinit, rinit, initialtime, finaltime, timeinc):
     """
     Calculate one run of <game> with starting population vector <popvector>
     using the discrete time replicator dynamics
     """
-    t = t0
-    popvector = np.concatenate((sinit, rinit))
+    time = initialtime
+    popvector = s.np.concatenate((sinit, rinit))
     data = [popvector]
-    while t < tfinal:
+    while time < finaltime:
         newpopvector = game.delta_X(popvector)
         popvector = newpopvector
-        t += tstep
-        data = np.append(data, [popvector], axis=0)
+        time += timeinc
+        data = s.np.append(data, [popvector], axis=0)
     return data
 
 
@@ -69,7 +73,7 @@ def one_basin_mixed(game, trials):
     # nash = s.Nash(game)
     newsols = pool.imap_unordered(one_basin_aux_mixed, zip(range(remain),
                                   it.repeat(game)))
-    data = np.array([sol for sol in newsols])
+    data = s.np.array([sol for sol in newsols])
     pool.close()
     pool.join()
     return data
@@ -79,7 +83,7 @@ def one_basin_aux_mixed(pair):
     """
     Calculate the one_basin loop. First odeint, then ode if error
     """
-    np.random.seed()
+    s.np.random.seed()
     print("trial {} -- odeint".format(pair[0]))
     data = one_run_odeint(pair[1], pair[1].strats.random_sender(),
                           pair[1].strats.random_receiver())
@@ -97,7 +101,7 @@ def one_basin_aux(pair):
     """
     Calculate the one_basin loop using one_run_odeint
     """
-    np.random.seed()
+    s.np.random.seed()
     print("trial {}".format(pair[0]))
     sols = one_run_odeint(pair[1], pair[1].strats.random_sender(),
                           pair[1].strats.random_receiver())
@@ -108,7 +112,7 @@ def one_basin_ode_aux(pair):
     """
     Calculate the one_basin loop using one_run_ode
     """
-    np.random.seed()
+    s.np.random.seed()
     print("trial {}".format(pair[0]))
     sols = one_run_ode(pair[1], pair[1].strats.random_sender(),
                        pair[1].strats.random_receiver())
@@ -149,8 +153,8 @@ def prob_vector(vector):
     """
     Test if <vector> is a probability vector
     """
-    return abs(np.sum(vector) - 1) < 1e-5 and np.all([0 <= elem for elem
-                                                      in vector])
+    return abs(s.np.sum(vector) - 1) < 1e-5 and s.np.all([0 <= elem for elem
+                                                          in vector])
 
 
 def test_success(element):
@@ -161,13 +165,13 @@ def test_failure(element):
     return "successful" not in element['message']
 
 
-vtest_success = np.vectorize(test_success)
-vtest_failure = np.vectorize(test_failure)
+vtest_success = s.np.vectorize(test_success)
+vtest_failure = s.np.vectorize(test_failure)
 
 
 def test_endstate(array):
     """
     Test if <array> is composed by two concatenated probability vectors
     """
-    vectors = np.split(np.around(array, decimals=10), 2)
+    vectors = s.np.split(s.np.around(array, decimals=10), 2)
     return prob_vector(vectors[0]) and prob_vector(vectors[1])
