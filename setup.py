@@ -91,13 +91,14 @@ class Evolve:
     sender, and another for the receiver. If no mutation matrix is given, no
     mutation will be assumed.
     """
-    def __init__(self, avgpayoff, mutation=0):
+    def __init__(self, avgpayoff):
         self.senderpayoffs = avgpayoff[0]
         self.receiverpayoffs = avgpayoff[1].T
         self.lss, self.lrs = self.senderpayoffs.shape
-        if mutation == 0:
-            self.mm_sender = np.identity(self.senderpayoffs.shape[0])
-            self.mm_receiver = np.identity(self.receiverpayoffs.shape[0])
+        # By default, mutation matrices are the identity matrices. You can
+        # change that.
+        self.mm_sender = np.identity(self.senderpayoffs.shape[0])
+        self.mm_receiver = np.identity(self.receiverpayoffs.shape[0])
 
     def random_sender(self):
         """
@@ -117,7 +118,7 @@ class Evolve:
     def receiver_avg_payoff(self, receiver, sender):
         return receiver.dot(self.receiverpayoffs.dot(sender))
 
-    def replicator_dX_dt(self, X, t):
+    def replicator_dX_dt_odeint(self, X, t):
         """
         Calculate the rhs of the system of odes for scipy.integrate.odeint
         """
@@ -164,7 +165,7 @@ class Evolve:
                        receiverpops * avgfitreceiver)
         return np.concatenate((senderdot, receiverdot))
 
-    def replicator_jacobian(self, X, t=0):
+    def replicator_jacobian_odeint(self, X, t=0):
         """
         Calculate the Jacobian of the system for scipy.integrate.odeint
         """
@@ -197,11 +198,6 @@ class Evolve:
         """
         Calculate the Jacobian of the system for scipy.integrate.ode
         """
-        # X's first half is the sender vector
-        # its second half the receiver vector
-        # Xsplit = np.array_split(X, 2)
-#         senderpops = Xsplit[0]
-#        receiverpops = Xsplit[1]
         senderpops = X[:self.lss]
         receiverpops = X[self.lss:]
         avgfitsender = self.sender_avg_payoff(senderpops, receiverpops)
@@ -241,6 +237,55 @@ class Evolve:
                              senderpops).dot(
                                  self.mm_receiver) / avgfitreceiver
         return np.concatenate((senderdelta, receiverdelta))
+
+    def replicator_odeint(self, sinit, rinit, times, **kwargs):
+        """
+        Calculate one run of the game following the , with starting
+        points sinit and rinit, in times <times>, using scipy.integrate.odeint
+        """
+        from scipy.integrate import odeint
+        return odeint(
+            self.replicator_dX_dt_odeint, np.concatenate((sinit, rinit)),
+            times, Dfun=self.replicator_jacobian_odeint, col_deriv=True,
+            **kwargs)
+
+    def replicator_ode(self, sinit, rinit):
+        """
+        Calculate one run of <game> with starting points sinit and rinit
+        using scipy.integrate.ode
+        """
+        from scipy.integrate import ode
+        initialpop = np.concatenate((sinit, rinit))
+        initialtime = 0
+        finaltime = 1000
+        timeinc = 1
+        equations = ode(self.replicator_dX_dt_ode,
+                        self.replicator_jacobian_ode).set_integrator('dopri5')
+        equations.set_initial_value(initialpop, initialtime)
+        while equations.successful() and equations.t < finaltime:
+            newdata = equations.integrate(equations.t + timeinc)
+            try:
+                data = np.append(data, [newdata], axis=0)
+            except NameError:
+                data = [newdata]
+        return data
+
+    def replicator_discrete(self, sinit, rinit, initialtime, finaltime,
+                            timeinc):
+        """
+        Calculate one run of <game> with starting population vector <popvector>
+        using the discrete time replicator dynamics
+        """
+        time = initialtime
+        popvector = np.concatenate((sinit, rinit))
+        data = [popvector]
+        while time < finaltime:
+            newpopvector = self.discrete_replicator_delta_X(popvector)
+            popvector = newpopvector
+            time += timeinc
+            data = np.append(data, [popvector], axis=0)
+        return data
+
 
 def mutationmatrix(mutation, dimension):
     """
