@@ -21,8 +21,8 @@ class Chance:
                  receiver_payoff_matrix, messages):
         """
         Take a mx1 numpy array with the unconditional probabilities of states,
-        a mxo numpy array with the sender payoffs, and a mxo numpy array with
-        receiver payoffs
+        a mxo numpy array with the sender payoffs, a mxo numpy array with
+        receiver payoffs, and the number of available messages
         """
         if any(state_chances.shape[0] != row for row in
                [sender_payoff_matrix.shape[0],
@@ -32,7 +32,7 @@ class Chance:
         if sender_payoff_matrix.shape != receiver_payoff_matrix.shape:
             sys.exit("Sender and receiver payoff arrays should have the same"
                      "shape")
-        if type(messages) != int:
+        if not isinstance(messages, int):
             sys.exit("The number of messages should be an integer")
         self.state_chances = state_chances
         self.sender_payoff_matrix = sender_payoff_matrix
@@ -80,20 +80,84 @@ class Chance:
         return np.fromfunction(payoff_ij, shape_result)
 
 
+class NonChance:
+    """
+    Construct a payoff function for a game without chance player: a sender that
+    chooses a message, among n possible ones; a receiver that chooses an act
+    among o possible ones; and the number of messages
+    """
+    def __init__(self, sender_payoff_matrix, receiver_payoff_matrix, messages):
+        """
+        Take a mxo numpy array with the sender payoffs, a mxo numpy array
+        with receiver payoffs, and the number of available messages
+        """
+        if sender_payoff_matrix.shape != receiver_payoff_matrix.shape:
+            sys.exit("Sender and receiver payoff arrays should have the same"
+                     "shape")
+        if not isinstance(messages, int):
+            sys.exit("The number of messages should be an integer")
+        self.sender_payoff_matrix = sender_payoff_matrix
+        self.receiver_payoff_matrix = receiver_payoff_matrix
+        self.states = sender_payoff_matrix.shape[0]
+        self.messages = messages
+        self.acts = sender_payoff_matrix.shape[1]
+
+    def sender_pure_strats(self):
+        """
+        Return the set of pure strategies available to the sender. For this
+        sort of games, a strategy is a tuple of a state and a probability
+        vector over the set of messages.
+        """
+        states = np.identity(self.states)
+        over_messages = np.identity(self.messages)
+        return list(it.product(states, over_messages))
+
+    def receiver_pure_strats(self):
+        """
+        Return the set of pure strategies available to the receiver
+        """
+        pure_strats = np.identity(self.acts)
+        return np.array(list(it.product(pure_strats, repeat=self.messages)))
+
+    def payoff(self, sender_strat, receiver_strat):
+        """
+        Calculate the average payoff for sender and receiver given concrete
+        sender and receiver strats
+        """
+        receiver_for_sender = sender_strat[1].dot(receiver_strat)
+        sender_payoff = sender_strat[0].dot(
+            self.sender_payoff_matrix.dot(receiver_for_sender))
+        receiver_payoff = sender_strat[0].dot(
+            self.receiver_payoff_matrix.dot(receiver_for_sender))
+        return (sender_payoff, receiver_payoff)
+
+    def avg_payoffs(self, sender_strats, receiver_strats):
+        """
+        Return an array with the average payoff of sender strat i against
+        receiver strat j in position <i, j>
+        """
+        payoff_ij = np.vectorize(lambda i, j: self.payoff(sender_strats[i],
+                                                          receiver_strats[j]))
+        shape_result = (len(sender_strats), len(receiver_strats))
+        return np.fromfunction(payoff_ij, shape_result, dtype=int)
+
+
 class Evolve:
     """
     Calculate the equations necessary to evolve a population of senders and one
-    of receivers. It takes as input a tuple: the first (second) member of the
-    tuple is a nxm array such that the <i,j> cell gives the expected payoff for
-    othe sender (receiver) of an encounter in which the sender follows strategy
-    i and the receiver follows strategy j.
-    As an additional input, it takes a tuple of a mutation matrix for the
-    sender, and another for the receiver. If no mutation matrix is given, no
-    mutation will be assumed.
+    of receivers. It takes as input a <game>, (which as of now only can be a
+    Chance object>, and a  tuple: the first (second) member of the tuple is a
+    nxm array such that the <i,j> cell gives the expected payoff for the sender
+    (receiver) of an encounter in which the sender follows strategy i and the
+    receiver follows strategy j.
     """
-    def __init__(self, avgpayoff):
-        self.senderpayoffs = avgpayoff[0]
-        self.receiverpayoffs = avgpayoff[1].T
+    def __init__(self, game, sendertypes, receivertypes):
+        self.game = game
+        avgpayoffs = self.game.avg_payoffs(sendertypes, receivertypes)
+        self.senderpayoffs = avgpayoffs[0]
+        self.receiverpayoffs = avgpayoffs[1].T
+        self.sendertypes = sendertypes
+        self.receivertypes = receivertypes
         self.lss, self.lrs = self.senderpayoffs.shape
         # By default, mutation matrices are the identity matrices. You can
         # change that.
@@ -102,20 +166,28 @@ class Evolve:
 
     def random_sender(self):
         """
-        Return a random sender population
+        Return frequencies of a random sender population
         """
         return np.random.dirichlet([1 for i in np.arange(self.lss)])
 
     def random_receiver(self):
         """
-        Return a random receiver population
+        Return frequencies of a random receiver population
         """
         return np.random.dirichlet([1 for i in np.arange(self.lrs)])
 
     def sender_avg_payoff(self, sender, receiver):
+        """
+        Return the average payoff that senders get when the population vectors
+        are <sender> and <receiver>
+        """
         return sender.dot(self.senderpayoffs.dot(receiver))
 
     def receiver_avg_payoff(self, receiver, sender):
+        """
+        Return the average payoff that receivers get when the population
+        vectors are <sender> and <receiver>
+        """
         return receiver.dot(self.receiverpayoffs.dot(sender))
 
     def replicator_dX_dt_odeint(self, X, t):
@@ -127,19 +199,15 @@ class Evolve:
         # Xsplit = np.array_split(X, 2)
         # senderpops = Xsplit[0]
         # receiverpops = Xsplit[1]
-        senderpops = X[:self.lss]
-        receiverpops = X[self.lss:]
+        senderpops, receiverpops = self.vector_to_populations(X)
         avgfitsender = self.sender_avg_payoff(senderpops, receiverpops)
         avgfitreceiver = self.receiver_avg_payoff(receiverpops, senderpops)
         senderdot = (self.senderpayoffs *
                      senderpops[..., None]).dot(
                          receiverpops).dot(
                              self.mm_sender) - senderpops * avgfitsender
-        receiverdot = ((self.receiverpayoffs *
-                       receiverpops[..., None]).dot(
-                           senderpops).dot(
-                               self.mm_receiver) -
-                       receiverpops * avgfitreceiver)
+        receiverdot = ((self.receiverpayoffs * receiverpops[..., None]).dot(
+            senderpops).dot(self.mm_receiver) - receiverpops * avgfitreceiver)
         return np.concatenate((senderdot, receiverdot))
 
     def replicator_dX_dt_ode(self, t, X):
@@ -151,18 +219,14 @@ class Evolve:
         # Xsplit = np.array_split(X, 2)
         # senderpops = Xsplit[0]
         # receiverpops = Xsplit[1]
-        senderpops = X[:self.lss]
-        receiverpops = X[self.lss:]
+        senderpops, receiverpops = self.vector_to_populations(X)
         avgfitsender = self.sender_avg_payoff(senderpops, receiverpops)
         avgfitreceiver = self.receiver_avg_payoff(receiverpops, senderpops)
         senderdot = (self.senderpayoffs *
                      senderpops[..., None]).dot(receiverpops).dot(
                          self.mm_sender) - senderpops * avgfitsender
-        receiverdot = ((self.receiverpayoffs *
-                       receiverpops[..., None]).dot(
-                           senderpops).dot(
-                               self.mm_receiver) -
-                       receiverpops * avgfitreceiver)
+        receiverdot = ((self.receiverpayoffs * receiverpops[..., None]).dot(
+            senderpops).dot(self.mm_receiver) - receiverpops * avgfitreceiver)
         return np.concatenate((senderdot, receiverdot))
 
     def replicator_jacobian_odeint(self, X, t=0):
@@ -174,8 +238,7 @@ class Evolve:
         # Xsplit = np.array_split(X, 2)
         # senderpops = Xsplit[0]
         # receiverpops = Xsplit[1]
-        senderpops = X[:self.lss]
-        receiverpops = X[self.lss:]
+        senderpops, receiverpops = self.vector_to_populations(X)
         avgfitsender = self.sender_avg_payoff(senderpops, receiverpops)
         avgfitreceiver = self.receiver_avg_payoff(receiverpops, senderpops)
         yS = self.senderpayoffs.dot(receiverpops)  # [y1P11 +...+ ynP1n, ...,
@@ -198,8 +261,7 @@ class Evolve:
         """
         Calculate the Jacobian of the system for scipy.integrate.ode
         """
-        senderpops = X[:self.lss]
-        receiverpops = X[self.lss:]
+        senderpops, receiverpops = self.vector_to_populations(X)
         avgfitsender = self.sender_avg_payoff(senderpops, receiverpops)
         avgfitreceiver = self.receiver_avg_payoff(receiverpops, senderpops)
         yS = self.senderpayoffs.dot(receiverpops)  # [y1P11 +...+ ynP1n, ...,
@@ -225,8 +287,7 @@ class Evolve:
         """
         # X's first part is the sender vector
         # its second part the receiver vector
-        senderpops = X[:self.lss]
-        receiverpops = X[self.lss:]
+        senderpops, receiverpops = self.vector_to_populations(X)
         avgfitsender = self.sender_avg_payoff(senderpops, receiverpops)
         avgfitreceiver = self.receiver_avg_payoff(receiverpops, senderpops)
         senderdelta = (self.senderpayoffs *
@@ -240,8 +301,9 @@ class Evolve:
 
     def replicator_odeint(self, sinit, rinit, times, **kwargs):
         """
-        Calculate one run of the game following the , with starting
-        points sinit and rinit, in times <times>, using scipy.integrate.odeint
+        Calculate one run of the game following the replicator(-mutator)
+        dynamics, with starting points sinit and rinit, in times <times>, using
+        scipy.integrate.odeint
         """
         from scipy.integrate import odeint
         return odeint(
@@ -249,16 +311,13 @@ class Evolve:
             times, Dfun=self.replicator_jacobian_odeint, col_deriv=True,
             **kwargs)
 
-    def replicator_ode(self, sinit, rinit):
+    def replicator_ode(self, sinit, rinit, initialtime, finaltime, timeinc):
         """
-        Calculate one run of <game> with starting points sinit and rinit
-        using scipy.integrate.ode
-        """
+        Calculate one run of the game, following the replicator(-mutator)
+        dynamics in continuous time, with starting points sinit and rinit using
+        scipy.integrate.ode """
         from scipy.integrate import ode
         initialpop = np.concatenate((sinit, rinit))
-        initialtime = 0
-        finaltime = 1000
-        timeinc = 1
         equations = ode(self.replicator_dX_dt_ode,
                         self.replicator_jacobian_ode).set_integrator('dopri5')
         equations.set_initial_value(initialpop, initialtime)
@@ -273,18 +332,44 @@ class Evolve:
     def replicator_discrete(self, sinit, rinit, initialtime, finaltime,
                             timeinc):
         """
-        Calculate one run of <game> with starting population vector <popvector>
-        using the discrete time replicator dynamics
+        Calculate one run of the game, following the discrete
+        replicator(-mutator) dynamics, with starting population vector
+        <popvector> using the discrete time replicator dynamics
         """
-        time = initialtime
+        times = (finaltime - initialtime) * timeinc + 1
         popvector = np.concatenate((sinit, rinit))
-        data = [popvector]
-        while time < finaltime:
-            newpopvector = self.discrete_replicator_delta_X(popvector)
-            popvector = newpopvector
-            time += timeinc
-            data = np.append(data, [popvector], axis=0)
+        data = np.empty([times, self.lss + self.lrs])
+        data[0] = popvector
+        for time in np.arange(initialtime + timeinc, finaltime + timeinc,
+                              timeinc):
+            data[time] = self.discrete_replicator_delta_X(data[time -
+                                                               timeinc])
         return data
+
+    def vector_to_populations(self, vector):
+        """
+        Take one of the population vectors returned by the solvers, and output
+        two vectors, for the sender and receiver populations respectively.
+        """
+        return np.hsplit(vector, [self.lss])
+
+    def sender_to_mixed_strat(self, senderpop):
+        """
+        Take a sender population vector and output the average
+        sender strat implemented by the whole population
+        """
+        mixedstratsender = self.sendertypes * senderpop[:, np.newaxis,
+                                                        np.newaxis]
+        return sum(mixedstratsender)
+
+    def receiver_to_mixed_strat(self, receiverpop):
+        """
+        Take a receiver population vector and output the average
+        receiver strat implemented by the whole population
+        """
+        mixedstratreceiver = self.receivertypes * receiverpop[:, np.newaxis,
+                                                              np.newaxis]
+        return sum(mixedstratreceiver)
 
 
 def mutationmatrix(mutation, dimension):
@@ -295,11 +380,3 @@ def mutationmatrix(mutation, dimension):
     return np.array([[1 - mutation if i == j else mutation/(dimension - 1)
                       for i in np.arange(dimension)] for j in
                      np.arange(dimension)])
-
-
-def int_or_list(intorlist):
-    whatisit = type(intorlist)
-    if whatisit == int:
-        return np.arange(intorlist)
-    if whatisit == np.ndarray:
-        return intorlist
