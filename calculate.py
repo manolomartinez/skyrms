@@ -1,8 +1,7 @@
 """
-Actually solve the differentials/difference equations
+Solve large batches of games
 """
-import setup as s
-from scipy.integrate import ode
+import game
 import json
 import os.path
 import pickle
