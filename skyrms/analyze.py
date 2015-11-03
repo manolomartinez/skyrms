@@ -5,7 +5,7 @@ import numpy as np
 import itertools as it
 from scipy.stats import kendalltau
 
-import exceptions
+from skyrms import exceptions
 
 
 class Information:
