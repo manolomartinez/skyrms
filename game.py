@@ -79,6 +79,15 @@ class Chance:
         shape_result = (sender_strats.shape[0], receiver_strats.shape[0])
         return np.fromfunction(payoff_ij, shape_result)
 
+    def calculate_sender_mixed_strat(self, sendertypes, senderpop):
+        mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis]
+        return sum(mixedstratsender)
+
+    def calcuate_receiver_mixed_strat(self, receivertypes, receiverpop):
+        mixedstratreceiver = receivertypes * receiverpop[:, np.newaxis,
+                                                         np.newaxis]
+        return sum(mixedstratreceiver)
+
 
 class NonChance:
     """
@@ -105,8 +114,9 @@ class NonChance:
     def sender_pure_strats(self):
         """
         Return the set of pure strategies available to the sender. For this
-        sort of games, a strategy is a tuple of a state and a probability
-        vector over the set of messages.
+        sort of games, a strategy is a tuple of vector with probability 1 for
+        the sender's state, and an mxn matrix in which the only nonzero row
+        is the one that correspond's to the sender's type.
         """
         states = np.identity(self.states)
         over_messages = np.identity(self.messages)
@@ -140,6 +150,15 @@ class NonChance:
                                                           receiver_strats[j]))
         shape_result = (len(sender_strats), len(receiver_strats))
         return np.fromfunction(payoff_ij, shape_result, dtype=int)
+
+    def calculate_sender_mixed_strat(self, sendertypes, senderpop):
+        mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis]
+        return sum(mixedstratsender)
+
+    def calculate_receiver_mixed_strat(self, receivertypes, receiverpop):
+        mixedstratreceiver = receivertypes * receiverpop[:, np.newaxis,
+                                                         np.newaxis]
+        return sum(mixedstratreceiver)
 
 
 class Evolve:
@@ -358,18 +377,16 @@ class Evolve:
         Take a sender population vector and output the average
         sender strat implemented by the whole population
         """
-        mixedstratsender = self.sendertypes * senderpop[:, np.newaxis,
-                                                        np.newaxis]
-        return sum(mixedstratsender)
+        return self.game.calculate_sender_mixed_strat(self.sendertypes,
+                                                      senderpop)
 
     def receiver_to_mixed_strat(self, receiverpop):
         """
         Take a receiver population vector and output the average
         receiver strat implemented by the whole population
         """
-        mixedstratreceiver = self.receivertypes * receiverpop[:, np.newaxis,
-                                                              np.newaxis]
-        return sum(mixedstratreceiver)
+        return self.game.calculate_receiver_mixed_strat(self.receivertypes,
+                                                        receiverpop)
 
 
 def mutationmatrix(mutation, dimension):
