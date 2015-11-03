@@ -2,7 +2,6 @@
 Actually solve the differentials/difference equations
 """
 import setup as s
-from scipy.integrate import odeint
 from scipy.integrate import ode
 import json
 import os.path
@@ -15,53 +14,6 @@ import itertools as it
 # game = s.Game(
 #    [63, 67, 10, 19, 8, 4, 4, 31, 40, 35, 92,
 #     36, 47, 59, 62, 77, 24, 34], 0.01, strat)
-
-
-def one_run_odeint(game, sinit, rinit, times, **kwargs):
-    """
-    Calculate one run of the setup.Evolve object <game>, with starting points
-    sinit and rinit, in times t, using scipy.integrate.odeint
-    """
-    return odeint(
-        game.replicator_dX_dt, s.np.concatenate((sinit, rinit)), times,
-        Dfun=game.replicator_jacobian, col_deriv=True, **kwargs)
-
-
-def one_run_ode(game, sinit, rinit):
-    """
-    Calculate one run of <game> with starting points sinit and rinit
-    using scipy.integrate.ode
-    """
-    initialpop = s.np.concatenate((sinit, rinit))
-    initialtime = 0
-    finaltime = 1000
-    timeinc = 1
-    equations = ode(game.replicator_dX_dt_ode,
-                    game.replicator_jacobian_ode).set_integrator('dopri5')
-    equations.set_initial_value(initialpop, initialtime)
-    while equations.successful() and equations.t < finaltime:
-        newdata = equations.integrate(equations.t + timeinc)
-        try:
-            data = s.np.append(data, [newdata], axis=0)
-        except NameError:
-            data = [newdata]
-    return data
-
-
-def one_run_discrete(game, sinit, rinit, initialtime, finaltime, timeinc):
-    """
-    Calculate one run of <game> with starting population vector <popvector>
-    using the discrete time replicator dynamics
-    """
-    time = initialtime
-    popvector = s.np.concatenate((sinit, rinit))
-    data = [popvector]
-    while time < finaltime:
-        newpopvector = game.delta_X(popvector)
-        popvector = newpopvector
-        time += timeinc
-        data = s.np.append(data, [popvector], axis=0)
-    return data
 
 
 def one_basin_mixed(game, trials):
