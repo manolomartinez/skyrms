@@ -118,9 +118,14 @@ class NonChance:
         the sender's state, and an mxn matrix in which the only nonzero row
         is the one that correspond's to the sender's type.
         """
-        states = np.identity(self.states)
+        def build_strat(state, row):
+            zeros = np.zeros((self.states, self.messages))
+            zeros[state] = row
+            return zeros
+        states = range(self.states)
         over_messages = np.identity(self.messages)
-        return list(it.product(states, over_messages))
+        return np.array([build_strat(state, row) for state, row in
+                         it.product(states, over_messages)])
 
     def receiver_pure_strats(self):
         """
@@ -134,11 +139,9 @@ class NonChance:
         Calculate the average payoff for sender and receiver given concrete
         sender and receiver strats
         """
-        receiver_for_sender = sender_strat[1].dot(receiver_strat)
-        sender_payoff = sender_strat[0].dot(
-            self.sender_payoff_matrix.dot(receiver_for_sender))
-        receiver_payoff = sender_strat[0].dot(
-            self.receiver_payoff_matrix.dot(receiver_for_sender))
+        state_act = sender_strat.dot(receiver_strat)
+        sender_payoff = np.sum(state_act * self.sender_payoff_matrix)
+        receiver_payoff = np.sum(state_act * self.receiver_payoff_matrix)
         return (sender_payoff, receiver_payoff)
 
     def avg_payoffs(self, sender_strats, receiver_strats):
@@ -149,7 +152,7 @@ class NonChance:
         payoff_ij = np.vectorize(lambda i, j: self.payoff(sender_strats[i],
                                                           receiver_strats[j]))
         shape_result = (len(sender_strats), len(receiver_strats))
-        return np.fromfunction(payoff_ij, shape_result, dtype=int)
+        return np.fromfunction(payoff_ij, shape_result)
 
     def calculate_sender_mixed_strat(self, sendertypes, senderpop):
         mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis]
