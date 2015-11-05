@@ -21,6 +21,7 @@ def one_basin_mixed(game, trials, times):
     newsols = pool.imap_unordered(one_basin_aux_mixed, zip(range(remain),
                                   it.repeat(game), it.repeat(times)))
     data = np.array([sol for sol in newsols])
+    pool.close()
     pool.join()
     return data
 
@@ -29,14 +30,14 @@ def one_basin_aux_mixed(triple):
     """
     Calculate the one_basin loop. First odeint, then ode if error
     """
-    print("trial {} -- odeint".format(triple[0]), end='\n')
+    print("trial {} -- odeint".format(triple[0]))
     np.random.seed()
     game = triple[1]
     times = triple[2]
     data = game.replicator_odeint(game.random_sender(), game.random_receiver(),
                                   times, full_output=True)
     if test_failure(data[1]):
-        print("trial {} -- ode".format(triple[0]), end='\n')
+        print("trial {} -- ode".format(triple[0]))
         sols = game.replicator_ode(game.random_sender(),
                                    game.random_receiver(), times)
     else:
