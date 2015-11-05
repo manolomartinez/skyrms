@@ -35,7 +35,7 @@ def one_basin_aux_mixed(triple):
     game = triple[1]
     times = triple[2]
     data = game.replicator_odeint(game.random_sender(), game.random_receiver(),
-                                  times)
+                                  times, full_output=True)
     if test_failure(data[1]):
         print("trial {} -- ode".format(triple[0]))
         sols = game.replicator_ode(game.random_sender(),
