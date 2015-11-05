@@ -9,7 +9,6 @@ import multiprocessing
 import itertools as it
 import numpy as np
 
-import skyrms.game
 
 def one_basin_mixed(game, trials, times):
     """
