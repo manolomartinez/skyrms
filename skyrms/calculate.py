@@ -2,14 +2,14 @@
 Solve large batches of games. There are a bunch of idyosincratic functions
 here. This module is mostly for illustration of use cases.
 """
-import skyrms.game
 import json
 import os.path
 import pickle
 import multiprocessing
 import itertools as it
-import skyrms.game.np as np
+import numpy as np
 
+import skyrms.game
 
 def one_basin_mixed(game, trials, times):
     """
