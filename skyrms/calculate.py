@@ -8,7 +8,6 @@ import os.path
 import pickle
 import multiprocessing
 import itertools as it
-import skyrms.game.np as np
 
 
 def one_basin_mixed(game, trials, times):
