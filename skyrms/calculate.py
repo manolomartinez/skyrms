@@ -21,7 +21,6 @@ def one_basin_mixed(game, trials, times):
     newsols = pool.imap_unordered(one_basin_aux_mixed, zip(range(remain),
                                   it.repeat(game), it.repeat(times)))
     data = np.array([sol for sol in newsols])
-    pool.close()
     pool.join()
     return data
 
