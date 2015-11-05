@@ -7,6 +7,8 @@ There are two main classes here:
 import numpy as np
 import itertools as it
 import sys
+from scipy.integrate import ode
+from scipy.integrate import odeint
 np.set_printoptions(precision=4)
 
 
@@ -324,48 +326,46 @@ class Evolve:
     def replicator_odeint(self, sinit, rinit, times, **kwargs):
         """
         Calculate one run of the game following the replicator(-mutator)
-        dynamics, with starting points sinit and rinit, in times <times>, using
-        scipy.integrate.odeint
+        dynamics, with starting points sinit and rinit, in times <times> (a
+        game.Times instance), using scipy.integrate.odeint
         """
-        from scipy.integrate import odeint
         return odeint(
             self.replicator_dX_dt_odeint, np.concatenate((sinit, rinit)),
-            times, Dfun=self.replicator_jacobian_odeint, col_deriv=True,
-            **kwargs)
+            times.time_vector, Dfun=self.replicator_jacobian_odeint,
+            col_deriv=True, **kwargs)
 
-    def replicator_ode(self, sinit, rinit, initialtime, finaltime, timeinc):
+    def replicator_ode(self, sinit, rinit, times):
         """
         Calculate one run of the game, following the replicator(-mutator)
-        dynamics in continuous time, with starting points sinit and rinit using
-        scipy.integrate.ode """
-        from scipy.integrate import ode
+        dynamics in continuous time, in <times> (a game.Times instance) with
+        starting points sinit and rinit using scipy.integrate.ode
+        """
         initialpop = np.concatenate((sinit, rinit))
         equations = ode(self.replicator_dX_dt_ode,
                         self.replicator_jacobian_ode).set_integrator('dopri5')
-        equations.set_initial_value(initialpop, initialtime)
-        while equations.successful() and equations.t < finaltime:
-            newdata = equations.integrate(equations.t + timeinc)
+        equations.set_initial_value(initialpop, times.initial_time)
+        while equations.successful() and equations.t < times.final_time:
+            newdata = equations.integrate(equations.t + times.time_inc)
             try:
                 data = np.append(data, [newdata], axis=0)
             except NameError:
                 data = [newdata]
         return data
 
-    def replicator_discrete(self, sinit, rinit, initialtime, finaltime,
-                            timeinc):
+    def replicator_discrete(self, sinit, rinit, times):
         """
         Calculate one run of the game, following the discrete
-        replicator(-mutator) dynamics, with starting population vector
-        <popvector> using the discrete time replicator dynamics
+        replicator(-mutator) dynamics, in <times> (a game.Times object) with
+        starting population vector <popvector> using the discrete time
+        replicator dynamics. Note that this solver will just calculate n points
+        in the evolution of the population, and will not try to match them to
+        the times as provided.
         """
-        times = (finaltime - initialtime) * timeinc + 1
         popvector = np.concatenate((sinit, rinit))
-        data = np.empty([times, self.lss + self.lrs])
-        data[0] = popvector
-        for time in np.arange(initialtime + timeinc, finaltime + timeinc,
-                              timeinc):
-            data[time] = self.discrete_replicator_delta_X(data[time -
-                                                               timeinc])
+        data = np.array([])
+        np.append(data, [popvector], axis=0)
+        for _ in range(len(times.time_vector)):
+            np.append(data, [self.discrete_replicator_delta_X(data[-1])])
         return data
 
     def vector_to_populations(self, vector):
@@ -390,6 +390,24 @@ class Evolve:
         """
         return self.game.calculate_receiver_mixed_strat(self.receivertypes,
                                                         receiverpop)
+
+
+class Times:
+    """
+    Provides a way of having a single time input to both odeint and ode
+    """
+    def __init__(self, initial_time, final_time, time_inc):
+        """
+        Takes the initial time for simulations <initial_time>, the final time
+        <final_time> and the time increment <time_inc>, and creates an object
+        with these values as attributes, and also a vector that can be fed into
+        odeint.
+        """
+        self.initial_time = initial_time
+        self.final_time = final_time
+        self.time_inc = time_inc
+        points = (final_time - initial_time) / time_inc
+        self.time_vector = np.linspace(initial_time, final_time, points)
 
 
 def mutationmatrix(mutation, dimension):
