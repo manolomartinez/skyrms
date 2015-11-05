@@ -30,7 +30,7 @@ def one_basin_aux_mixed(triple):
     """
     Calculate the one_basin loop. First odeint, then ode if error
     """
-    print("trial {} -- odeint\n".format(triple[0]))
+    print("trial {} -- odeint".format(triple[0]), end='\n')
     np.random.seed()
     game = triple[1]
     times = triple[2]
