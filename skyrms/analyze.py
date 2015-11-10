@@ -85,11 +85,12 @@ def unconditional_probabilities(unconditional_input, strategy):
     return strategy * unconditional_input
 
 
-def from_joint_to_conditional(matrix):
+def from_joint_to_conditional(array):
     """
-    Normalizes a matrix row-wise
+    Normalize a matrix row-wise, being sensible with all-zero rows
+
     """
-    return matrix/sum(matrix.transpose())[..., None]
+    return np.apply_along_axis(normalize_vector, 1, array)
 
 
 def from_conditional_to_joint(unconds, conds):
@@ -122,6 +123,16 @@ def escalar_product_map(matrix, vector):
     """
     trm = matrix.transpose()
     return np.vectorize(np.dot)(trm, vector).transpose()
+
+
+def normalize_vector(vector):
+    """
+    Normalize a vector, leaving all-zero vector as they are
+    """
+    if np.allclose(vector, np.zeros_like(vector)):
+        return vector
+    else:
+        return vector / sum(vector)
 
 
 class CommonInterest:
