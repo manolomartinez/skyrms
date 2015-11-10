@@ -45,7 +45,22 @@ class Information:
         return joint_s_m.dot(self.acts_cond_on_msg)
 
     def mutual_info_states_acts(self):
+        """
+        Calculate the mutual info between states and acts
+        """
         return mutual_info_from_joint(self.joint_states_acts())
+
+    def mutual_info_states_messages(self):
+        """
+        Calculate the mutual info between states and messages
+        """
+        return mutual_info_from_joint(self.joint_states_messages())
+
+    def mutual_info_messages_acts(self):
+        """
+        Calculate the mutual info between messages and acts
+        """
+        return mutual_info_from_joint(self.joint_messages_acts())
 
 
 def conditional_entropy(conds, unconds):
