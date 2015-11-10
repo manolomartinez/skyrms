@@ -26,7 +26,7 @@ class Information:
             # This is a game without a chance node. State chances are
             # calculated from the sender strategy, and msg_cond_on_states is
             # not given directly
-            self.state_chances = np.sum(sender, axis=0)
+            self.state_chances = np.sum(sender, axis=1)
             self.msg_cond_on_states, self.acts_cond_on_msg = (
                 self.sender / self.state_chances, self.receiver)
 
