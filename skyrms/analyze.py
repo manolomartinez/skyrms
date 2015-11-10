@@ -17,14 +17,18 @@ class Information:
     def __init__(self, game, sender, receiver):
         self.sender = sender
         self.receiver = receiver
+        self.game = game
         if self.game.chance_node:
             self.state_chances = game.state_chances
+            self.msg_cond_on_states, self.acts_cond_on_msg = (self.sender,
+                                                              self.receiver)
         else:
             # This is a game without a chance node. State chances are
-            # calculated from the sender strategy.
+            # calculated from the sender strategy, and msg_cond_on_states is
+            # not given directly
             self.state_chances = np.sum(sender, axis=0)
-        self.msg_cond_on_states, self.acts_cond_on_msg = (self.sender,
-                                                          self.receiver)
+            self.msg_cond_on_states, self.acts_cond_on_msg = (
+                self.sender / self.state_chances, self.receiver)
 
     def joint_states_messages(self):
         return from_conditional_to_joint(self.state_chances,
