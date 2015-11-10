@@ -28,7 +28,7 @@ class Information:
             # not given directly
             self.state_chances = np.sum(sender, axis=1)
             self.msg_cond_on_states, self.acts_cond_on_msg = (
-                self.sender / self.state_chances, self.receiver)
+                from_joint_to_conditional(sender), self.receiver)
 
     def joint_states_messages(self):
         return from_conditional_to_joint(self.state_chances,
