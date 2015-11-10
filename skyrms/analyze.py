@@ -11,12 +11,18 @@ from skyrms import exceptions
 class Information:
     """
     Calculate information-theoretic quantities between strats. It expects a
-    game, as created by game.Chance, a sender strategy, and a receiver strategy
+    game, as created by game.Chance or game.NonChance, a sender strategy, and a
+    receiver strategy
     """
     def __init__(self, game, sender, receiver):
         self.sender = sender
         self.receiver = receiver
-        self.state_chances = game.state_chances
+        if self.game.chance_node:
+            self.state_chances = game.state_chances
+        else:
+            # This is a game without a chance node. State chances are
+            # calculated from the sender strategy.
+            self.state_chances = np.sum(sender, axis=0)
         self.msg_cond_on_states, self.acts_cond_on_msg = (self.sender,
                                                           self.receiver)
 
