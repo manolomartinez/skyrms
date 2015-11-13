@@ -30,14 +30,14 @@ def one_basin_aux_mixed(triple):
     """
     Calculate the one_basin loop. First odeint, then ode if error
     """
-    print("trial {} -- odeint".format(triple[0]))
+    print("trial {} -- lsoda".format(triple[0]))
     np.random.seed()
     game = triple[1]
     times = triple[2]
-    data = game.replicator_odeint(game.random_sender(), game.random_receiver(),
-                                  times, full_output=True)
+    data = game.replicator_ode(game.random_sender(), game.random_receiver(),
+                               times, integrator="lsoda")
     if test_failure(data[1]):
-        print("trial {} -- ode".format(triple[0]))
+        print("trial {} -- dopri5".format(triple[0]))
         sols = game.replicator_ode(game.random_sender(),
                                    game.random_receiver(), times)
     else:
