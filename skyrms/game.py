@@ -364,8 +364,7 @@ class Evolve:
         the times as provided.
         """
         popvector = np.concatenate((sinit, rinit))
-        data = np.array([])
-        np.append(data, [popvector], axis=0)
+        data = np.array([popvector])
         for _ in range(len(times.time_vector)):
             np.append(data, [self.discrete_replicator_delta_X(data[-1])])
         return data
