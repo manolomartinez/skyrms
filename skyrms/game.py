@@ -336,7 +336,7 @@ class Evolve:
             times.time_vector, Dfun=self.replicator_jacobian_odeint,
             col_deriv=True, **kwargs)
 
-    def replicator_ode(self, sinit, rinit, times):
+    def replicator_ode(self, sinit, rinit, times, integrator='dopri5'):
         """
         Calculate one run of the game, following the replicator(-mutator)
         dynamics in continuous time, in <times> (a game.Times instance) with
@@ -344,7 +344,8 @@ class Evolve:
         """
         initialpop = np.concatenate((sinit, rinit))
         equations = ode(self.replicator_dX_dt_ode,
-                        self.replicator_jacobian_ode).set_integrator('dopri5')
+                        self.replicator_jacobian_ode).set_integrator(
+                            integrator)
         equations.set_initial_value(initialpop, times.initial_time)
         while equations.successful() and equations.t < times.final_time:
             newdata = equations.integrate(equations.t + times.time_inc)
