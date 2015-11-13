@@ -69,7 +69,8 @@ def one_basin_ode_aux(triple):
     times = triple[2]
     sols = game.replicator_ode(game.random_sender(), game.random_receiver(),
                                times)
-    return sols
+    tofile = [sols[0]] + [sols[-1]]
+    return tofile
 
 
 def one_batch(fileinput, directory, alreadydone=""):
