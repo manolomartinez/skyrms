@@ -28,7 +28,7 @@ def one_basin_mixed(game, trials, times):
 
 def one_basin_aux_mixed(triple):
     """
-    Calculate the one_basin loop. First odeint, then ode if error
+    Calculate the one_basin loop. First lsoda, then dopri5 if error
     """
     print("trial {} -- lsoda".format(triple[0]))
     np.random.seed()
