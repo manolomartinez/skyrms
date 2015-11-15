@@ -37,7 +37,7 @@ def one_basin_aux_mixed(triple, print_trials=True):
     times = triple[2]
     sols = game.replicator_ode(game.random_sender(), game.random_receiver(),
                                times, integrator="lsoda")
-    if not pop_vector(sols):
+    if not pop_vector(sols[-1]):
         if print_trials:
             print("trial {} -- dopri5".format(triple[0]))
         sols = game.replicator_ode(game.random_sender(),
