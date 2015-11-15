@@ -10,7 +10,7 @@ import itertools as it
 import numpy as np
 
 
-def one_basin_mixed(game, trials, times):
+def one_basin_mixed(game, trials, times, **kwargs):
     """
     Calculate evolutions for <trials> starting points of <game> (which is an
     instance of game.Evolve), in <times> (an instance of game.Times)
@@ -26,18 +26,20 @@ def one_basin_mixed(game, trials, times):
     return data
 
 
-def one_basin_aux_mixed(triple):
+def one_basin_aux_mixed(triple, print_trials=False):
     """
     Calculate the one_basin loop. First lsoda, then dopri5 if error
     """
-    print("trial {} -- lsoda".format(triple[0]))
+    if print_trials:
+        print("trial {} -- lsoda".format(triple[0]))
     np.random.seed()
     game = triple[1]
     times = triple[2]
     sols = game.replicator_ode(game.random_sender(), game.random_receiver(),
                                times, integrator="lsoda")
     if not pop_vector(sols):
-        print("trial {} -- dopri5".format(triple[0]))
+        if print_trials:
+            print("trial {} -- dopri5".format(triple[0]))
         sols = game.replicator_ode(game.random_sender(),
                                    game.random_receiver(), times)
     tofile = [sols[0]] + [sols[-1]]
