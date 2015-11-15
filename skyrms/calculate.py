@@ -10,7 +10,7 @@ import itertools as it
 import numpy as np
 
 
-def one_basin_mixed(game, trials, times, **kwargs):
+def one_basin_mixed(game, trials, times):
     """
     Calculate evolutions for <trials> starting points of <game> (which is an
     instance of game.Evolve), in <times> (an instance of game.Times)
@@ -19,17 +19,14 @@ def one_basin_mixed(game, trials, times, **kwargs):
     remain = trials
     # nash = s.Nash(game)
     newsols = pool.imap_unordered(one_basin_aux_mixed, zip(range(remain),
-                                                           it.repeat(game),
-                                                           it.repeat(times),
-                                                           it.repeat(
-                                                               **kwargs)))
+                                  it.repeat(game), it.repeat(times)))
     data = np.array([sol for sol in newsols])
     pool.close()
     pool.join()
     return data
 
 
-def one_basin_aux_mixed(triple, print_trials=False):
+def one_basin_aux_mixed(triple, print_trials=True):
     """
     Calculate the one_basin loop. First lsoda, then dopri5 if error
     """
