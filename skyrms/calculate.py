@@ -108,7 +108,8 @@ def pop_vector(vector):
     Test if <vector> is a population vector: sums a total of 2, and every value
     is larger or equal than zero
     """
-    return abs(np.sum(vector) - 2) < 1e-10 and np.all(0 <= vector)
+    return abs(np.sum(vector) - 2) < 1e-05 and np.all(
+        -1e-05 <= vector) and np.all(vector <= (1 + 1e-05))
 
 
 def test_success(element):
