@@ -19,7 +19,10 @@ def one_basin_mixed(game, trials, times, **kwargs):
     remain = trials
     # nash = s.Nash(game)
     newsols = pool.imap_unordered(one_basin_aux_mixed, zip(range(remain),
-                                  it.repeat(game), it.repeat(times)), **kwargs)
+                                                           it.repeat(game),
+                                                           it.repeat(times),
+                                                           it.repeat(
+                                                               **kwargs)))
     data = np.array([sol for sol in newsols])
     pool.close()
     pool.join()
