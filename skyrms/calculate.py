@@ -34,14 +34,12 @@ def one_basin_aux_mixed(triple):
     np.random.seed()
     game = triple[1]
     times = triple[2]
-    data = game.replicator_ode(game.random_sender(), game.random_receiver(),
+    sols = game.replicator_ode(game.random_sender(), game.random_receiver(),
                                times, integrator="lsoda")
-    if test_failure(data[1]):
+    if not pop_vector(sols):
         print("trial {} -- dopri5".format(triple[0]))
         sols = game.replicator_ode(game.random_sender(),
                                    game.random_receiver(), times)
-    else:
-        sols = data[0]
     tofile = [sols[0]] + [sols[-1]]
     return tofile
 
@@ -64,7 +62,7 @@ def one_basin_ode_aux(triple):
     Calculate the one_basin loop using one_run_ode
     """
     np.random.seed()
-    print("trial {}".format(triple[0]))
+    # print("trial {}".format(triple[0]))
     game = triple[1]
     times = triple[2]
     sols = game.replicator_ode(game.random_sender(), game.random_receiver(),
@@ -103,12 +101,12 @@ def one_batch(fileinput, directory, alreadydone=""):
                 json.dump(games_done, donegames)
 
 
-def prob_vector(vector):
+def pop_vector(vector):
     """
-    Test if <vector> is a probability vector
+    Test if <vector> is a population vector: sums a total of 2, and every value
+    is larger or equal than zero
     """
-    return abs(np.sum(vector) - 1) < 1e-5 and np.all([0 <= elem for elem in
-                                                      vector])
+    return abs(np.sum(vector) - 2) < 1e-10 and np.all(0 <= vector)
 
 
 def test_success(element):
