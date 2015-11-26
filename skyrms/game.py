@@ -189,6 +189,9 @@ class Evolve:
         # change that.
         self.mm_sender = np.identity(self.senderpayoffs.shape[0])
         self.mm_receiver = np.identity(self.receiverpayoffs.shape[0])
+        # We can set a limit of precision in the calculation of diffeqs, to
+        # avoid artifacts. By default, we do not
+        self.precision = None
 
     def random_sender(self):
         """
@@ -234,7 +237,10 @@ class Evolve:
                              self.mm_sender) - senderpops * avgfitsender
         receiverdot = ((self.receiverpayoffs * receiverpops[..., None]).dot(
             senderpops).dot(self.mm_receiver) - receiverpops * avgfitreceiver)
-        return np.concatenate((senderdot, receiverdot))
+        result = np.concatenate((senderdot, receiverdot)) 
+        if self.precision:
+            np.around(result, decimals=self.precision, out=result)
+        return result
 
     def replicator_dX_dt_ode(self, t, X):
         """
@@ -253,7 +259,10 @@ class Evolve:
                          self.mm_sender) - senderpops * avgfitsender
         receiverdot = ((self.receiverpayoffs * receiverpops[..., None]).dot(
             senderpops).dot(self.mm_receiver) - receiverpops * avgfitreceiver)
-        return np.concatenate((senderdot, receiverdot))
+        result = np.concatenate((senderdot, receiverdot))
+        if self.precision:
+            np.around(result, decimals=self.precision, out=result)
+        return result
 
     def replicator_jacobian_odeint(self, X, t=0):
         """
@@ -281,6 +290,8 @@ class Evolve:
         lefthalf = np.vstack((tile1.transpose(), tile2.transpose()))
         righthalf = np.vstack((tile3.transpose(), tile4.transpose()))
         jac = np.hstack((lefthalf, righthalf))
+        if self.precision:
+            np.around(jac, decimals=self.precision, out=jac)
         return jac
 
     def replicator_jacobian_ode(self, t, X):
@@ -304,6 +315,8 @@ class Evolve:
         lefthalf = np.vstack((tile1.transpose(), tile2.transpose()))
         righthalf = np.vstack((tile3.transpose(), tile4.transpose()))
         jac = np.hstack((lefthalf, righthalf))
+        if self.precision:
+            np.around(jac, decimals=self.precision, out=jac)
         return jac.transpose()
 
     def discrete_replicator_delta_X(self, X):
@@ -323,7 +336,10 @@ class Evolve:
                          receiverpops[..., None]).dot(
                              senderpops).dot(
                                  self.mm_receiver) / avgfitreceiver
-        return np.concatenate((senderdelta, receiverdelta))
+        result = np.concatenate((senderdelta, receiverdelta))
+        if self.precision:
+            np.around(result, decimals=self.precision, out=result)
+        return result
 
     def replicator_odeint(self, sinit, rinit, times, **kwargs):
         """
