@@ -288,6 +288,6 @@ def periodic_vector(vector):
     rfft = np.fft.rfft(vector)
     magnitudes = np.abs(np.real(rfft))
     choice = magnitudes > sorted(magnitudes)[-3]
-    newrfft = np.choose(choice, (np.zeros_like(rfft), fft))
+    newrfft = np.choose(choice, (np.zeros_like(rfft), rfft))
     newvector = np.fft.irfft(newrfft)
     return np.allclose(vector, newvector, atol=1e-2)
