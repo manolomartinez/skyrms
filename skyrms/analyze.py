@@ -261,3 +261,33 @@ class Nash:
 
 
 
+class Stability:
+    """
+    Calculate some coarse stability measures of population vectors 
+    """
+    def __init__(self, evolution):
+        """
+        <evolution> is an (points, types) matrix, with a population vector in
+        each row, representing an evolution from row 0 to row <points>
+        """
+
+
+def stable_vector(vector):
+    """
+    Return true if the vector does not move
+    """
+    return np.allclose(0, max(vector) - min(vector))
+
+
+def periodic_vector(vector):
+    """
+    We take the FFT of a vector, and eliminate all components but the two main
+    ones (i.e., the static and biggest sine amplitude) and compare the
+    reconstructed wave with the original. Return true if close enough
+    """
+    rfft = np.fft.rfft(vector)
+    magnitudes = np.abs(np.real(rfft))
+    choice = magnitudes > sorted(magnitudes[-3])
+    newrfft = np.choose(choice, (np.zeros_like(rfft), fft))
+    newvector = np.fft.irfft(newrfft)
+    return np.allclose(vector, newvector, atol=1e-2)
