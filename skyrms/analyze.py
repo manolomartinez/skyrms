@@ -260,16 +260,20 @@ class Nash:
         return senderisbest and receiverisbest
 
 
-
-class Stability:
+def stability(array):
     """
-    Calculate some coarse stability measures of population vectors 
+    Compute a coarse grained measure of the stability of the array
     """
-    def __init__(self, evolution):
-        """
-        <evolution> is an (points, types) matrix, with a population vector in
-        each row, representing an evolution from row 0 to row <points>
-        """
+    trans_array = array.T
+    stable = np.apply_along_axis(stable_vector, 1, trans_array)
+    if np.all(stable):
+        return 'stable'
+    nonstable = trans_array[np.logical_not(stable)]
+    periodic = np.apply_along_axis(periodic_vector, 1, nonstable)
+    if np.all(periodic):
+        return 'periodic'
+    else:
+        return 'nonstable'
 
 
 def stable_vector(vector):
