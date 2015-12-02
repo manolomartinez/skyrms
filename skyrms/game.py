@@ -384,8 +384,9 @@ class Evolve:
         data = np.array([popvector])
         for _ in range(len(times.time_vector)):
             data = np.append(data,
-                             [self.discrete_replicator_delta_X(data[-1])])
-            return data
+                             [self.discrete_replicator_delta_X(data[-1])],
+                             axis=0)
+        return data
 
     def vector_to_populations(self, vector):
         """
