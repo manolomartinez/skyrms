@@ -381,11 +381,10 @@ class Evolve:
         the times as provided.
         """
         popvector = np.concatenate((sinit, rinit))
-        data = np.array([popvector])
-        for _ in range(len(times.time_vector)):
-            data = np.append(data,
-                             [self.discrete_replicator_delta_X(data[-1])],
-                             axis=0)
+        data = np.empty([len(times.time_vector), len(popvector)])
+        data[0, :] = popvector
+        for i in range(1, len(times.time_vector)):
+            data[i, :] = self.discrete_replicator_delta_X(data[i - 1, :])
         return data
 
     def vector_to_populations(self, vector):
