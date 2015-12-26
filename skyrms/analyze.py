@@ -260,6 +260,9 @@ class Nash:
         return senderisbest and receiverisbest
 
 
+# What follow are some helper functions to ascertain whether a population has
+# reached a state in which no more interesting changes should be expected
+
 def stability(array):
     """
     Compute a coarse grained measure of the stability of the array
