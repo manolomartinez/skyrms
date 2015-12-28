@@ -168,6 +168,90 @@ class NonChance:
         return sum(mixedstratreceiver)
 
 
+class BothSignal:
+    """
+    Construct a payoff function for a game without chance player, and in which
+    both players signal before acting: sender and receiver choose a message
+    among m and n possible ones respectively; then they both choose acts among
+    o and p respectively.
+    """
+    def __init__(self, sender_payoff_matrix, receiver_payoff_matrix,
+                 sender_msgs, receiver_msgs):
+        """
+        Take a mxo numpy array with the sender payoffs, a mxo numpy array
+        with receiver payoffs, and the number of available messages
+        """
+        if sender_payoff_matrix.shape != receiver_payoff_matrix.shape:
+            sys.exit("Sender and receiver payoff arrays should have the same"
+                     "shape")
+        if not isinstance(sender_msgs, int) or not isinstance(receiver_msgs,
+                                                              int):
+            sys.exit("The number of messages for sender and receiver should "
+                     "be an integer")
+        self.chance_node = False  # flag to know where the game comes from
+        self.both_signal = True  # ... and another flag (this needs fixing)
+        self.sender_payoff_matrix = sender_payoff_matrix
+        self.receiver_payoff_matrix = receiver_payoff_matrix
+        self.states = sender_payoff_matrix.shape[0]
+        self.sender_msgs = sender_msgs
+        self.receiver_msgs = receiver_msgs
+        self.acts = sender_payoff_matrix.shape[1]
+
+    def sender_pure_strats(self):
+        """
+        Return the set of pure strategies available to the sender. For this
+        sort of games, a strategy is an mxnxo matrix in which the only non-zero
+        row, r,  gives the act to be performed in the presence of sender
+        message r, and receiver message given by the column
+        """
+        def build_strat(sender_msg, row):
+            zeros = np.zeros((self.sender_msgs, self.receiver_msgs))
+            zeros[sender_msg] = row
+            return zeros
+        states = np.identity(self.states)
+        rows = np.array([row for row in it.product(states, repeat=self.acts)])
+        return np.array([build_strat(message, row) for message, row in
+                         it.product(range(self.sender_msgs), rows)])
+
+    def receiver_pure_strats(self):
+        """
+        Return the set of pure strategies available to the receiver
+        """
+        pure_strats = np.identity(self.acts)
+        return np.array(list(it.product(pure_strats, repeat=self.messages)))
+
+    def payoff(self, sender_strat, receiver_strat):
+        """
+        Calculate the average payoff for sender and receiver given concrete
+        sender and receiver strats
+        """
+        state_act = sender_strat.dot(receiver_strat)
+        sender_payoff = np.sum(state_act * self.sender_payoff_matrix)
+        receiver_payoff = np.sum(state_act * self.receiver_payoff_matrix)
+        return (sender_payoff, receiver_payoff)
+
+    def avg_payoffs(self, sender_strats, receiver_strats):
+        """
+        Return an array with the average payoff of sender strat i against
+        receiver strat j in position <i, j>
+        """
+        payoff_ij = np.vectorize(lambda i, j: self.payoff(sender_strats[i],
+                                                          receiver_strats[j]))
+        shape_result = (len(sender_strats), len(receiver_strats))
+        return np.fromfunction(payoff_ij, shape_result)
+
+    def calculate_sender_mixed_strat(self, sendertypes, senderpop):
+        mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis]
+        return sum(mixedstratsender)
+
+    def calculate_receiver_mixed_strat(self, receivertypes, receiverpop):
+        mixedstratreceiver = receivertypes * receiverpop[:, np.newaxis,
+                                                         np.newaxis]
+        return sum(mixedstratreceiver)
+
+
+
+
 class Evolve:
     """
     Calculate the equations necessary to evolve a population of senders and one
