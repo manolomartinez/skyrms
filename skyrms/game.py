@@ -201,24 +201,37 @@ class BothSignal:
         """
         Return the set of pure strategies available to the sender. For this
         sort of games, a strategy is an mxnxo matrix in which the only non-zero
-        row, r,  gives the act to be performed in the presence of sender
+        row, r,  gives the state to be assumed in the presence of sender
         message r, and receiver message given by the column
         """
         def build_strat(sender_msg, row):
-            zeros = np.zeros((self.sender_msgs, self.receiver_msgs))
+            zeros = np.zeros((self.sender_msgs, self.receiver_msgs,
+                              self.states))
             zeros[sender_msg] = row
             return zeros
         states = np.identity(self.states)
-        rows = np.array([row for row in it.product(states, repeat=self.acts)])
+        rows = np.array([row for row in it.product(states,
+                                                   repeat=self.receiver_msgs)])
         return np.array([build_strat(message, row) for message, row in
                          it.product(range(self.sender_msgs), rows)])
 
     def receiver_pure_strats(self):
         """
-        Return the set of pure strategies available to the receiver
+        Return the set of pure strategies available to the receiver. For this
+        sort of games, a strategy is an mxnxp matrix in which the only non-zero
+        row, r,  gives the act to be performed in the presence of sender
+        message r, and sender message given by the column
         """
-        pure_strats = np.identity(self.acts)
-        return np.array(list(it.product(pure_strats, repeat=self.messages)))
+        def build_strat(receiver_msg, row):
+            zeros = np.zeros((self.receiver_msgs, self.sender_msgs,
+                              self.acts))
+            zeros[receiver_msg] = row
+            return zeros
+        acts = np.identity(self.acts)
+        rows = np.array([row for row in it.product(acts,
+                                                   repeat=self.sender_msgs)])
+        return np.array([build_strat(message, row) for message, row in
+                         it.product(range(self.receiver_msgs), rows)])
 
     def payoff(self, sender_strat, receiver_strat):
         """
