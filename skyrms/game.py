@@ -238,7 +238,8 @@ class BothSignal:
         Calculate the average payoff for sender and receiver given concrete
         sender and receiver strats
         """
-        state_act = sender_strat.dot(receiver_strat)
+        state_act = np.tensordot(sender_strat, receiver_strat, axes=([0, 1],
+                                                                     [1, 0]))
         sender_payoff = np.sum(state_act * self.sender_payoff_matrix)
         receiver_payoff = np.sum(state_act * self.receiver_payoff_matrix)
         return (sender_payoff, receiver_payoff)
@@ -261,8 +262,6 @@ class BothSignal:
         mixedstratreceiver = receivertypes * receiverpop[:, np.newaxis,
                                                          np.newaxis]
         return sum(mixedstratreceiver)
-
-
 
 
 class Evolve:
