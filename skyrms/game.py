@@ -255,11 +255,13 @@ class BothSignal:
         return np.fromfunction(payoff_ij, shape_result)
 
     def calculate_sender_mixed_strat(self, sendertypes, senderpop):
-        mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis]
+        mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis,
+                                                   np.newaxis]
         return sum(mixedstratsender)
 
     def calculate_receiver_mixed_strat(self, receivertypes, receiverpop):
         mixedstratreceiver = receivertypes * receiverpop[:, np.newaxis,
+                                                         np.newaxis,
                                                          np.newaxis]
         return sum(mixedstratreceiver)
 
