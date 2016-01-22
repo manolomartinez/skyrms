@@ -207,10 +207,10 @@ class NoSignal:
         Calculate the average payoff for sender and receiver given concrete
         sender and receiver strats
         """
-        sender_payoff = sender_strat @ self.sender_payoff_matrix @
-            receiver_strat
-        receiver_payoff = sender_strat @ self.receiver_payoff_matrix @
-            receiver_strat
+        sender_payoff =
+            sender_strat @ self.sender_payoff_matrix @ receiver_strat
+        receiver_payoff = 
+            sender_strat @ self.receiver_payoff_matrix @ receiver_strat
         return (sender_payoff, receiver_payoff)
 
     def avg_payoffs(self, sender_strats, receiver_strats):
@@ -224,13 +224,10 @@ class NoSignal:
         return np.fromfunction(payoff_ij, shape_result)
 
     def calculate_sender_mixed_strat(self, sendertypes, senderpop):
-        mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis]
-        return sum(mixedstratsender)
+        return sendertypes @ senderpop
 
     def calculate_receiver_mixed_strat(self, receivertypes, receiverpop):
-        mixedstratreceiver = receivertypes * receiverpop[:, np.newaxis,
-                                                         np.newaxis]
-        return sum(mixedstratreceiver)
+        return receivertypes @ receiverpop
 
 
 class BothSignal:
