@@ -168,6 +168,71 @@ class NonChance:
         return sum(mixedstratreceiver)
 
 
+class NoSignal:
+    """
+    Construct a payoff function for a game without chance player: and in which
+    no one signals: "sender" (the first player) chooses a "state", among n
+    possible ones; "receiver" chooses an act among o possible ones
+    """
+    def __init__(self, sender_payoff_matrix, receiver_payoff_matrix):
+        """
+        Take a mxo numpy array with the sender payoffs, and a mxo numpy array
+        with receiver payoffs
+        """
+        if sender_payoff_matrix.shape != receiver_payoff_matrix.shape:
+            sys.exit("Sender and receiver payoff arrays should have the same"
+                     "shape")
+        self.chance_node = False  # flag to know where the game comes from
+        self.sender_payoff_matrix = sender_payoff_matrix
+        self.receiver_payoff_matrix = receiver_payoff_matrix
+        self.states = sender_payoff_matrix.shape[0]
+        self.acts = sender_payoff_matrix.shape[1]
+
+    def sender_pure_strats(self):
+        """
+        Return the set of pure strategies available to the sender. For this
+        sort of games, a strategy is a probablity vector over the set of states
+        """
+        return np.eye(self.states)
+
+    def receiver_pure_strats(self):
+        """
+        Return the set of pure strategies available to the receiver.  For this
+        sort of games, a strategy is a probablity vector over the set of acts
+        """
+        return np.eye(self.acts)
+
+    def payoff(self, sender_strat, receiver_strat):
+        """
+        Calculate the average payoff for sender and receiver given concrete
+        sender and receiver strats
+        """
+        sender_payoff = sender_strat @ self.sender_payoff_matrix @
+            receiver_strat
+        receiver_payoff = sender_strat @ self.receiver_payoff_matrix @
+            receiver_strat
+        return (sender_payoff, receiver_payoff)
+
+    def avg_payoffs(self, sender_strats, receiver_strats):
+        """
+        Return an array with the average payoff of sender strat i against
+        receiver strat j in position <i, j>
+        """
+        payoff_ij = np.vectorize(lambda i, j: self.payoff(sender_strats[i],
+                                                          receiver_strats[j]))
+        shape_result = (len(sender_strats), len(receiver_strats))
+        return np.fromfunction(payoff_ij, shape_result)
+
+    def calculate_sender_mixed_strat(self, sendertypes, senderpop):
+        mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis]
+        return sum(mixedstratsender)
+
+    def calculate_receiver_mixed_strat(self, receivertypes, receiverpop):
+        mixedstratreceiver = receivertypes * receiverpop[:, np.newaxis,
+                                                         np.newaxis]
+        return sum(mixedstratreceiver)
+
+
 class BothSignal:
     """
     Construct a payoff function for a game without chance player, and in which
