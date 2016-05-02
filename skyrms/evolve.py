@@ -20,7 +20,7 @@ class OnePop:
         self.game = game
         self.avgpayoffs = self.game.avg_payoffs(playertypes)
         self.playertypes = playertypes
-        self.lps = self.playertypes.shape
+        self.lps = self.playertypes.shape[0]
         # By default, mutation matrices are the identity matrices. You can
         # change that.
         self.mm = np.identity(self.lps)
