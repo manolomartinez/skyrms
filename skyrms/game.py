@@ -56,6 +56,13 @@ class Chance:
         pure_strats = np.identity(self.acts)
         return np.array(list(it.product(pure_strats, repeat=self.messages)))
 
+    def one_pop_pure_strats(self):
+        """
+        Return the set of pure strategies available to players in a
+        one-population setup
+        """
+        return player_pure_strats(self)
+
     def payoff(self, sender_strat, receiver_strat):
         """
         Calculate the average payoff for sender and receiver given concrete
@@ -79,6 +86,13 @@ class Chance:
                                                           receiver_strats[j]))
         shape_result = (sender_strats.shape[0], receiver_strats.shape[0])
         return np.fromfunction(payoff_ij, shape_result)
+
+    def one_pop_avg_payoffs(self, one_player_strats):
+        """
+        Return an array with the average payoff of one-pop strat i against
+        one-pop strat j in position <i, j>
+        """
+        return one_pop_avg_payoffs(self, one_player_strats)
 
     def calculate_sender_mixed_strat(self, sendertypes, senderpop):
         mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis]
@@ -136,6 +150,13 @@ class NonChance:
         pure_strats = np.identity(self.acts)
         return np.array(list(it.product(pure_strats, repeat=self.messages)))
 
+    def one_pop_pure_strats(self):
+        """
+        Return the set of pure strategies available to players in a
+        one-population setup
+        """
+        return player_pure_strats(self)
+
     def payoff(self, sender_strat, receiver_strat):
         """
         Calculate the average payoff for sender and receiver given concrete
@@ -155,6 +176,13 @@ class NonChance:
                                                           receiver_strats[j]))
         shape_result = (len(sender_strats), len(receiver_strats))
         return np.fromfunction(payoff_ij, shape_result)
+
+    def one_pop_avg_payoffs(self, one_player_strats):
+        """
+        Return an array with the average payoff of one-pop strat i against
+        one-pop strat j in position <i, j>
+        """
+        return one_pop_avg_payoffs(self, one_player_strats)
 
     def calculate_sender_mixed_strat(self, sendertypes, senderpop):
         mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis]
@@ -200,6 +228,13 @@ class NoSignal:
         """
         return np.eye(self.acts)
 
+    def one_pop_pure_strats(self):
+        """
+        Return the set of pure strategies available to players in a
+        one-population setup
+        """
+        return player_pure_strats(self)
+
     def payoff(self, sender_strat, receiver_strat):
         """
         Calculate the average payoff for sender and receiver given concrete
@@ -218,6 +253,13 @@ class NoSignal:
                                                           receiver_strats[j]))
         shape_result = (len(sender_strats), len(receiver_strats))
         return np.fromfunction(payoff_ij, shape_result)
+
+    def one_pop_avg_payoffs(self, one_player_strats):
+        """
+        Return an array with the average payoff of one-pop strat i against
+        one-pop strat j in position <i, j>
+        """
+        return one_pop_avg_payoffs(self, one_player_strats)
 
     def calculate_sender_mixed_strat(self, sendertypes, senderpop):
         return sendertypes @ senderpop
@@ -291,6 +333,13 @@ class BothSignal:
         return np.array([build_strat(message, row) for message, row in
                          it.product(range(self.receiver_msgs), rows)])
 
+    def one_pop_pure_strats(self):
+        """
+        Return the set of pure strategies available to players in a
+        one-population setup
+        """
+        return player_pure_strats(self)
+
     def payoff(self, sender_strat, receiver_strat):
         """
         Calculate the average payoff for sender and receiver given concrete
@@ -312,6 +361,13 @@ class BothSignal:
         shape_result = (len(sender_strats), len(receiver_strats))
         return np.fromfunction(payoff_ij, shape_result)
 
+    def one_pop_avg_payoffs(self, one_player_strats):
+        """
+        Return an array with the average payoff of one-pop strat i against
+        one-pop strat j in position <i, j>
+        """
+        return one_pop_avg_payoffs(self, one_player_strats)
+
     def calculate_sender_mixed_strat(self, sendertypes, senderpop):
         mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis,
                                                    np.newaxis]
@@ -324,4 +380,34 @@ class BothSignal:
         return sum(mixedstratreceiver)
 
 
+def player_pure_strats(game):
+    """
+    Take an instance of the Chance, NonChance, NoSignal or BothSignal classes,
+    and return a a list of strategies available to players in a one-population
+    setup
+    """
+    return it.product(game.sender_pure_strats(),
+                      game.receiver_pure_strats())
 
+
+def symmetric_payoff(game, player_pure_strats, i, j):
+    """
+    Take an instance of the Chance, NonChance, NoSignal or BothSignal classes,
+    the set of strategies available to players in the one-population setup, and
+    the numbers of a sender strategy and a receiver strategy, and return the
+    symmetrized payoff for the player assuming sender and receiver roles
+    alternatively.
+    """
+    sender1 = player_pure_strats[i, 0]
+    receiver1 = player_pure_strats[i, 1]
+    sender2 = player_pure_strats[j, 0]
+    receiver2 = player_pure_strats[j, 1]
+    return 0.5 * (game.payoff(sender1, receiver2)[0] +
+                  game.payoff(sender2, receiver1)[1])
+
+
+def one_pop_avg_payoffs(game, player_strats):
+    shape_result = [len(player_strats)] * 2
+    curried = np.vectorize(lambda i, j: symmetric_payoff(game, player_strats,
+                                                         i, j))
+    return np.fromfunction(curried, shape_result)
