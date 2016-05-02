@@ -386,8 +386,8 @@ def player_pure_strats(game):
     and return a a list of strategies available to players in a one-population
     setup
     """
-    return np.array(it.product(game.sender_pure_strats(),
-                               game.receiver_pure_strats()))
+    return list(it.product(game.sender_pure_strats(),
+                           game.receiver_pure_strats()))
 
 
 def symmetric_payoff(game, player_pure_strats, i, j):
