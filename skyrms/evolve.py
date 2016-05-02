@@ -18,7 +18,7 @@ class OnePop:
     """
     def __init__(self, game, playertypes):
         self.game = game
-        self.avgpayoffs = self.game.one_pop_avg_payoffs(playertypes)
+        self.avgpayoffs = self.game.avg_payoffs(playertypes)
         self.playertypes = playertypes
         self.lps = self.playertypes.shape
         # By default, mutation matrices are the identity matrices. You can
