@@ -1,6 +1,6 @@
 """
-Set up an evolutionary game, that can be then fed to the evolve module.
-There are two main classes here:
+Set up an asymmetric evolutionary game, that can be then fed to the evolve
+module.  There are two main classes here:
     - Games with a chance player
     - Games without a chance player
 """
