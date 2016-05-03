@@ -389,18 +389,17 @@ class TwoPops:
                 data = [newdata]
         return data
 
-    def replicator_discrete(self, sinit, rinit, times):
+    def replicator_discrete(self, initpop, times):
         """
         Calculate one run of the game, following the discrete
         replicator(-mutator) dynamics, in <times> (a game.Times object) with
-        starting population vector <popvector> using the discrete time
+        starting population vector <initpop> using the discrete time
         replicator dynamics. Note that this solver will just calculate n points
         in the evolution of the population, and will not try to match them to
         the times as provided.
         """
-        popvector = np.concatenate((sinit, rinit))
-        data = np.empty([len(times.time_vector), len(popvector)])
-        data[0, :] = popvector
+        data = np.empty([len(times.time_vector), len(initpop)])
+        data[0, :] = initpop
         for i in range(1, len(times.time_vector)):
             data[i, :] = self.discrete_replicator_delta_X(data[i - 1, :])
         return data
