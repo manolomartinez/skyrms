@@ -127,7 +127,7 @@ class OnePop:
         discrete time replicator dynamics (Huttegger 2007)
         """
         avgfitness = self.avg_payoff(X)
-        delta = (self.avgpayoffs * X[..., None]) / avgfitness
+        delta = X * (self.avgpayoffs @ X) / avgfitness
         if self.precision:
             np.around(delta, decimals=self.precision, out=delta)
         return delta
