@@ -34,7 +34,7 @@ class OnePop:
         """
         return np.random.dirichlet([1 for i in np.arange(self.lps)])
 
-    def player_avg_payoff(self, player):
+    def avg_payoff(self, player):
         """
         Return the average payoff that players get when the population vector
         is <player>
@@ -45,7 +45,7 @@ class OnePop:
         """
         Calculate the rhs of the system of odes for scipy.integrate.odeint
         """
-        avgfitplayer = self.player_avg_payoff(X)
+        avgfitplayer = self.avg_payoff(X)
         result = self.avgpayoffs.dot(X) - X * avgfitplayer
         if self.precision:
             np.around(result, decimals=self.precision, out=result)
@@ -77,14 +77,7 @@ class OnePop:
         """
         Calculate the Jacobian of the system for scipy.integrate.odeint
         """
-        # X's first half is the sender vector
-        # its second half the receiver vector
-        # Xsplit = np.array_split(X, 2)
-        # senderpops = Xsplit[0]
-        # receiverpops = Xsplit[1]
-        senderpops, receiverpops = self.vector_to_populations(X)
-        avgfitsender = self.sender_avg_payoff(senderpops, receiverpops)
-        avgfitreceiver = self.receiver_avg_payoff(receiverpops, senderpops)
+        avgfitness = self.player_avg_payoff(X)
         yS = self.senderpayoffs.dot(receiverpops)  # [y1P11 +...+ ynP1n, ...,
         # y1Pn1 + ... ynPnn] This one works
         xS = self.senderpayoffs * senderpops[..., None]
@@ -133,22 +126,11 @@ class OnePop:
         Calculate a population vector for t' given the vector for t, using the
         discrete time replicator dynamics (Huttegger 2007)
         """
-        # X's first part is the sender vector
-        # its second part the receiver vector
-        senderpops, receiverpops = self.vector_to_populations(X)
-        avgfitsender = self.sender_avg_payoff(senderpops, receiverpops)
-        avgfitreceiver = self.receiver_avg_payoff(receiverpops, senderpops)
-        senderdelta = (self.senderpayoffs *
-                       senderpops[..., None]).dot(
-                           receiverpops).dot(self.mm_sender) / avgfitsender
-        receiverdelta = (self.receiverpayoffs *
-                         receiverpops[..., None]).dot(
-                             senderpops).dot(
-                                 self.mm_receiver) / avgfitreceiver
-        result = np.concatenate((senderdelta, receiverdelta))
+        avgfitness = self.avg_payoff(X)
+        delta = (self.avg_payoffs * X[..., None]) / avgfitness
         if self.precision:
-            np.around(result, decimals=self.precision, out=result)
-        return result
+            np.around(delta, decimals=self.precision, out=delta)
+        return delta
 
     def replicator_odeint(self, sinit, rinit, times, **kwargs):
         """
@@ -196,28 +178,12 @@ class OnePop:
             data[i, :] = self.discrete_replicator_delta_X(data[i - 1, :])
         return data
 
-    def vector_to_populations(self, vector):
+    def pop_to_mixed_strat(self, pop):
         """
-        Take one of the population vectors returned by the solvers, and output
-        two vectors, for the sender and receiver populations respectively.
+        Take a population vector and output the average strat implemented by
+        the whole population
         """
-        return np.hsplit(vector, [self.lss])
-
-    def sender_to_mixed_strat(self, senderpop):
-        """
-        Take a sender population vector and output the average
-        sender strat implemented by the whole population
-        """
-        return self.game.calculate_sender_mixed_strat(self.sendertypes,
-                                                      senderpop)
-
-    def receiver_to_mixed_strat(self, receiverpop):
-        """
-        Take a receiver population vector and output the average
-        receiver strat implemented by the whole population
-        """
-        return self.game.calculate_receiver_mixed_strat(self.receivertypes,
-                                                        receiverpop)
+        return self.game.calculate_mixed_strat(self.playertypes, pop)
 
 
 class TwoPops:
