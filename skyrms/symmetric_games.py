@@ -36,9 +36,8 @@ class NoSignal:
         Calculate the average payoff for sender and receiver given concrete
         sender and receiver strats
         """
-        first_payoff = first_player @ self.payoff_matrix @ second_player
-        second_payoff = first_player @ self.payoff_matrix.T @ second_player
-        return (first_payoff, second_payoff)
+        payoff = first_player @ self.payoff_matrix @ second_player
+        return payoff
 
     def avg_payoffs(self, player_strats):
         """
