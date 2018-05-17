@@ -96,12 +96,19 @@ def unconditional_probabilities(unconditional_input, strategy):
     return strategy * unconditional_input
 
 
+def normalize_axis(array, axis):
+    """
+    Normalize a matrix along <axis>, being sensible with all-zero rows
+    """
+    return np.apply_along_axis(normalize_vector, axis, array)
+
+
 def from_joint_to_conditional(array):
     """
-    Normalize a matrix row-wise, being sensible with all-zero rows
+    Normalize row-wise
 
     """
-    return np.apply_along_axis(normalize_vector, 1, array)
+    return np.apply_along_axis(normalize_axis, 1, array)
 
 
 def from_conditional_to_joint(unconds, conds):
