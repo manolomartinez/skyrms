@@ -108,7 +108,7 @@ def from_joint_to_conditional(array):
     Normalize row-wise
 
     """
-    return np.apply_along_axis(normalize_axis, 1, array)
+    return normalize_axis(array, 1)
 
 
 def from_conditional_to_joint(unconds, conds):
