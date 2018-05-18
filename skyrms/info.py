@@ -59,6 +59,164 @@ class Information:
         return mutual_info_from_joint(self.joint_messages_acts())
 
 
+class Shea:
+    """
+    Calculate functional content vectors as presented in Shea, Godfrey-Smith
+    andand Cao 2017.
+    """
+    def __init__(self, game):
+        """
+        Parameters
+        ----------
+        game: a skyrms.asymmetric_games.Chance object
+        """
+        self.game = game
+        self.baseline_sender, self.baseline_receiver = self.baseline_payoffs()
+
+    def baseline_payoffs(self):
+        """
+        Give a vector with the payoffs for sender, and another for receiver,
+        when the receiver does the best possible act for it in the absence of any communication.
+        I will choose, for now, the receiver act that gives the best possible sender payoff
+        (this is not decided by Shea et al.; see fn.14)
+        """
+        vec_expected = np.vectorize(self.expected_for_act)
+        payoffs = np.apply_along_axis(vec_expected, 0, np.arange(self.game.acts)).T
+        maxreceiver = np.max(payoffs[:, 1])
+        sender = payoffs[:, 0][payoffs[:, 1] == maxreceiver]
+        return np.max(sender), maxreceiver
+
+    def expected_for_act(self, act):
+        """
+        Calculate the expected payoff for sender and receiver of doing one act,
+        in the absence of communication
+        """
+        sender_payoffs_per_state = self.game.sender_payoff_matrix[:, act]
+        receiver_payoffs_per_state = self.game.receiver_payoff_matrix[:, act]
+        expected_sender = self.game.state_chances.dot(sender_payoffs_per_state)
+        expected_receiver = self.game.state_chances.dot(
+            receiver_payoffs_per_state)
+        return expected_sender, expected_receiver
+
+    def normal_payoffs(self):
+        """
+        Calculate payoffs minus the baseline
+        """
+        normal_sender = self.game.sender_payoff_matrix - self.baseline_sender
+        normal_receiver = self.game.receiver_payoff_matrix - self.baseline_receiver
+        return normal_sender, normal_receiver
+
+    def calc_dmin(self):
+        """
+        Calculate dmin as defined in Shea et al. (2917, p. 24)
+        """
+        normal_sender, normal_receiver = self.normal_payoffs()
+        return np.minimum(normal_sender, normal_receiver)
+
+    def calc_summation(self, norm_payoff, receiver_strat):
+        """
+        Calculate the summation in the entries of the functional content vector
+        """
+        inside_summation_raw = np.multiply.outer(norm_payoff, receiver_strat)
+        inside_summation = np.einsum('ijkj->ijk', inside_summation_raw)
+        return np.sum(inside_summation, axis=1)
+
+    def calc_entries(self, sender_strat, receiver_strat, payoff_matrix):
+        """
+        Calculate the entries of the functional vector, given one choice for
+        the (baselined) payoff matrix
+        """
+        bayes_sender = bayes_theorem(self.game.state_chances, sender_strat)
+        summation = self.calc_summation(payoff_matrix, receiver_strat)
+        return bayes_sender * summation
+
+    def calc_entries_dmin(self, sender_strat, receiver_strat):
+        """
+        Calculate the entries of the functional vector, given one choice for
+        the official dmin
+        """
+        return self.calc_entries(sender_strat, receiver_strat,
+                                 self.calc_dmin())
+
+    def calc_entries_sender(self, sender_strat, receiver_strat):
+        """
+        Calculate the entries of the functional vector, for the baselined
+        sender
+        """
+        normal_sender = self.game.sender_payoff_matrix - self.baseline_sender
+        return self.calc_entries(sender_strat, receiver_strat, normal_sender)
+
+    def calc_entries_receiver(self, sender_strat, receiver_strat):
+        """
+        Calculate the entries of the functional vector, for the baselined
+        receiver
+        """
+        normal_receiver = self.game.receiver_payoff_matrix - self.baseline_receiver
+        return self.calc_entries(sender_strat, receiver_strat, normal_receiver)
+
+    def calc_condition(self, receiver_strat, payoff_matrix, baseline):
+        """
+        Calculate the condition for nonzero vector entries
+        """
+        outer = np.multiply.outer(receiver_strat, payoff_matrix)
+        precondition = np.einsum('kjij->ijk', outer)
+        return np.sum(precondition, axis=1) > baseline
+
+    def calc_condition_sender(self, receiver_strat):
+        """
+        Calculate condition() for the sender payoff matrix and baseline
+        """
+        return self.calc_condition(receiver_strat,
+                                   self.game.sender_payoff_matrix,
+                                   self.baseline_sender)
+
+    def calc_condition_receiver(self, receiver_strat):
+        """
+        Calculate condition() for the receiver payoff matrix and baseline
+        """
+        return self.calc_condition(receiver_strat,
+                                   self.game.receiver_payoff_matrix,
+                                   self.baseline_receiver)
+
+    def calc_condition_common(self, receiver_strat):
+        """
+        Calculate the condition for a nonzero functional vector entry in
+        the definition in (op. cit., p. 24)
+        """
+        return self.calc_condition_sender(
+            receiver_strat) & self.calc_condition_receiver(receiver_strat)
+
+    def functional_content(self, entries, condition):
+        """
+        Put everything together in a functional vector per message
+        """
+        return normalize_axis(entries * condition, 0)
+
+    def functional_content_sender(self, sender_strat, receiver_strat):
+        """
+        Calculate the functional content from the perspective of the sender
+        """
+        return self.functional_content(self.calc_entries_sender(sender_strat,
+                                                                receiver_strat),
+                                       self.calc_condition_sender(receiver_strat))
+
+    def functional_content_receiver(self, sender_strat, receiver_strat):
+        """
+        Calculate the functional content from the perspective of the receiver
+        """
+        return self.functional_content(self.calc_entries_receiver(sender_strat,
+                                                                  receiver_strat),
+                                       self.calc_condition_receiver(receiver_strat))
+
+    def functional_content_dmin(self, sender_strat, receiver_strat):
+        """
+        Calculate the functional content from the perspective of dmin
+        """
+        return self.functional_content(self.calc_entries_dmin(sender_strat,
+                                                              receiver_strat),
+                                       self.calc_condition_common(receiver_strat))
+
+
 def conditional_entropy(conds, unconds):
     """
     Take a matrix of probabilities of the column random variable (r. v.)
@@ -124,6 +282,27 @@ def from_conditional_to_joint(unconds, conds):
             [[P(B1,A1), ...., P(Bn,A1)],..., [P(B1,Am),...,P(Bn,Am)]]
     """
     return conds * unconds[..., None]
+
+
+def bayes_theorem(unconds, conds):
+    """
+    Perform Bayes' theorem on a matrix of conditional probabilities
+
+    Parameters
+    ----------
+    unconds:
+        a (n x 1) numpy array of unconditional probabilities [P(A1), ... , P(An)]
+    conds:
+        a (m x n) numpy array of conditional probabilities
+        [[P(B1|A1), ... , P(Bm|A1)], ... , [P(B1|An), ..., P(Bm|An)]]
+
+    Returns
+    -------
+    A (n x m) numpy array of conditional probabilities
+        [[P(A1|B1), ... , P(An|B1)], ... , [P(PA1|Bm), ... , P(An|Bm)]]
+    """
+    joint = from_conditional_to_joint(unconds, conds)
+    return from_joint_to_conditional(joint.T).T
 
 
 def entropy(vector):
