@@ -1,6 +1,8 @@
 """
 Information-theoretic analyses
 """
+from itertools import repeat
+import multiprocessing
 
 import numpy as np
 
@@ -57,6 +59,120 @@ class Information:
         Calculate the mutual info between messages and acts
         """
         return mutual_info_from_joint(self.joint_messages_acts())
+
+class RDT:
+    """
+    Calculate the rate-distortion function.
+    """
+    def __init__(self, game, distortion_matrix, a=3, b=3, K=10, epsilon=0.001):
+        """
+        Parameters
+        ----------
+        game: a skyrms.asymmetric_games.Chance object
+        distortion_matrix: a distortion_matrix (same dimension as payoff
+        matrices)
+
+        a, b, epsilon: These are parameters of the blahut algorithm. See Cover
+        & Thomas 2006, p. 334
+
+        K: The number of points in the R(D) curve to calculate
+        """
+        # I am not sure where np.vectorize statements such as these should go.
+        # At the top of __init__ for now :/
+        self.K = K
+        self.pmf = game.state_chances
+        # self.outcomes = distribution.outcomes
+        self.m = len(self.pmf)
+        self.epsilon = epsilon
+        self.a = a
+        self.b = b
+        self.s = np.array([self.calc_s(k) for k in range(K)])
+        self.dist_matrix = distortion_matrix
+
+    def all_points(self, iterator=None, outputfile=None):
+        """
+        Calculate the R(D) function for as many points as given by <iterator>
+        (all of them by default)
+        Save them to <file>. Each line of the file (row of the array) is [K,
+        distortion, rate]
+        """
+        if not iterator:
+            iterator = range(self.K)
+        return np.array([self.blahut(k, outputfile) for k in
+                         iterator]).T
+
+    def all_points_multiprocessing(self, iterator=None, outputfile=None):
+        """
+        Calculate the R(D) function for as many points as given by <iterator>
+        (all of them by default)
+        Save them to <file>. Each line of the file (row of the array) is [K,
+        distortion, rate]
+        """
+        pool = multiprocessing.Pool(None)
+        if not iterator:
+            iterator = range(self.K)
+        # nash = s.Nash(game)
+        newsols = pool.imap_unordered(self.blahut_mp, zip(iterator,
+                                                       repeat(outputfile)))
+        data = np.array([sol for sol in newsols])
+        pool.close()
+        pool.join()
+        return data.T
+
+    def calc_s(self, k):
+        return -self.a * np.exp(-self.b * k)
+
+    def blahut_mp(self, args):
+        return self.blahut(*args)
+
+    def blahut(self, k, outputfile):
+        """
+        Calculate the point in the R(D)-D curve with slope given by
+        self.calc_s(<k>). Follows Cover & Thomas 2006, p. 334
+        """
+        s = self.calc_s(k)
+        # we start with the uniform output distribution
+        output = np.ones(self.m) / self.m
+        cond = self.update_conditional(s, output)
+        distortion = self.calc_distortion(cond)
+        rate = self.calc_rate(cond, output)
+        delta_dist = 2 * self.epsilon
+        while delta_dist > self.epsilon:
+            output = self.pmf @ cond
+            cond = self.update_conditional(s, output)
+            new_distortion = self.calc_distortion(cond)
+            rate = self.calc_rate(cond, output)
+            delta_dist = np.abs(new_distortion - distortion)
+            distortion = new_distortion
+        if outputfile:
+            with open(outputfile, "a") as outf:
+                outf.write("{}\t{}\t{}\n".format(k, rate, new_distortion))
+        return rate, new_distortion
+
+    def update_conditional(self, s, output):
+        """
+        Calculate a new conditional distribution from the <output> distribution
+        and the <s> parameter.  The conditional probability matrix is such that
+        cond[i, j] corresponds to P(x^_j | x_i)
+        """
+        cond = output * np.exp(s * self.dist_matrix)
+        cond = cond / cond.sum(1)[:, np.newaxis]  # normalize
+        return cond
+
+    def calc_distortion(self, cond):
+        """
+        Calculate the distortion for a given channel (individuated by the
+        conditional matrix in <cond>
+        """
+        # return np.sum(self.pmf @ (cond * self.dist_matrix))
+        return np.matmul(self.pmf, (cond * self.dist_matrix)).sum()
+
+    def calc_rate(self, cond, output):
+        """
+        Calculate the rate for a channel (given by <cond>) and output
+        distribution (given by <output>)
+        """
+        return np.sum(self.pmf @ (cond * np.log2(cond / output)))
 
 
 class Shea:
