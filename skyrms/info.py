@@ -60,6 +60,7 @@ class Information:
         """
         return mutual_info_from_joint(self.joint_messages_acts())
 
+
 class RDT:
     """
     Calculate the rate-distortion function.
@@ -86,8 +87,9 @@ class RDT:
         self.epsilon = epsilon
         self.a = a
         self.b = b
-        self.s = np.array([self.calc_s(k) for k in range(K)])
+        self.λ = np.array([self.calc_λ(k) for k in range(K)])
         self.dist_matrix = distortion_matrix
+        
 
     def all_points(self, iterator=None, outputfile=None):
         """
@@ -119,7 +121,7 @@ class RDT:
         pool.join()
         return data.T
 
-    def calc_s(self, k):
+    def calc_λ(self, k):
         return -self.a * np.exp(-self.b * k)
 
     def blahut_mp(self, args):
@@ -130,16 +132,16 @@ class RDT:
         Calculate the point in the R(D)-D curve with slope given by
         self.calc_s(<k>). Follows Cover & Thomas 2006, p. 334
         """
-        s = self.calc_s(k)
+        λ = self.calc_λ(k)
         # we start with the uniform output distribution
         output = np.ones(self.m) / self.m
-        cond = self.update_conditional(s, output)
+        cond = self.update_conditional(λ, output)
         distortion = self.calc_distortion(cond)
         rate = self.calc_rate(cond, output)
         delta_dist = 2 * self.epsilon
         while delta_dist > self.epsilon:
             output = self.pmf @ cond
-            cond = self.update_conditional(s, output)
+            cond = self.update_conditional(λ, output)
             new_distortion = self.calc_distortion(cond)
             rate = self.calc_rate(cond, output)
             delta_dist = np.abs(new_distortion - distortion)
@@ -149,13 +151,13 @@ class RDT:
                 outf.write("{}\t{}\t{}\n".format(k, rate, new_distortion))
         return rate, new_distortion
 
-    def update_conditional(self, s, output):
+    def update_conditional(self, λ, output):
         """
         Calculate a new conditional distribution from the <output> distribution
-        and the <s> parameter.  The conditional probability matrix is such that
+        and the <λ> parameter.  The conditional probability matrix is such that
         cond[i, j] corresponds to P(x^_j | x_i)
         """
-        cond = output * np.exp(s * self.dist_matrix)
+        cond = output * np.exp(λ * self.dist_matrix)
         cond = cond / cond.sum(1)[:, np.newaxis]  # normalize
         return cond
 
