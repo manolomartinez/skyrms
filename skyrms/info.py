@@ -63,9 +63,9 @@ class Information:
 
 class RDT:
     """
-    Calculate the rate-distortion function.
+    Calculate the rate-distortion function for a game and a disortion measure
     """
-    def __init__(self, game, distortion_matrix, a=3, b=3, K=10, epsilon=0.001):
+    def __init__(self, game, distortion_matrix, epsilon=0.001):
         """
         Parameters
         ----------
@@ -73,23 +73,13 @@ class RDT:
         distortion_matrix: a distortion_matrix (same dimension as payoff
         matrices)
 
-        a, b, epsilon: These are parameters of the blahut algorithm. See Cover
-        & Thomas 2006, p. 334
-
-        K: The number of points in the R(D) curve to calculate
+        epsilon: the precision up to which the point should be calculated
         """
-        # I am not sure where np.vectorize statements such as these should go.
-        # At the top of __init__ for now :/
-        self.K = K
         self.pmf = game.state_chances
-        # self.outcomes = distribution.outcomes
-        self.m = len(self.pmf)
+        self.outcomes = len(self.pmf)
         self.epsilon = epsilon
-        self.a = a
-        self.b = b
-        self.λ = np.array([self.calc_λ(k) for k in range(K)])
         self.dist_matrix = distortion_matrix
-        
+
 
     def all_points(self, iterator=None, outputfile=None):
         """
@@ -115,49 +105,45 @@ class RDT:
             iterator = range(self.K)
         # nash = s.Nash(game)
         newsols = pool.imap_unordered(self.blahut_mp, zip(iterator,
-                                                       repeat(outputfile)))
+                                                          repeat(outputfile)))
         data = np.array([sol for sol in newsols])
         pool.close()
         pool.join()
         return data.T
 
-    def calc_λ(self, k):
-        return -self.a * np.exp(-self.b * k)
-
     def blahut_mp(self, args):
+        """
+        Unpack args for the official blahut function
+        """
         return self.blahut(*args)
 
-    def blahut(self, k, outputfile):
+    def blahut(self, lambda_):
         """
         Calculate the point in the R(D)-D curve with slope given by
         self.calc_s(<k>). Follows Cover & Thomas 2006, p. 334
         """
-        λ = self.calc_λ(k)
         # we start with the uniform output distribution
-        output = np.ones(self.m) / self.m
-        cond = self.update_conditional(λ, output)
+        output = np.ones(self.outcomes) / self.outcomes
+        cond = self.update_conditional(lambda_, output)
         distortion = self.calc_distortion(cond)
         rate = self.calc_rate(cond, output)
         delta_dist = 2 * self.epsilon
         while delta_dist > self.epsilon:
             output = self.pmf @ cond
-            cond = self.update_conditional(λ, output)
+            cond = self.update_conditional(lambda_, output)
             new_distortion = self.calc_distortion(cond)
             rate = self.calc_rate(cond, output)
             delta_dist = np.abs(new_distortion - distortion)
             distortion = new_distortion
-        if outputfile:
-            with open(outputfile, "a") as outf:
-                outf.write("{}\t{}\t{}\n".format(k, rate, new_distortion))
         return rate, new_distortion
 
-    def update_conditional(self, λ, output):
+    def update_conditional(self, lambda_, output):
         """
         Calculate a new conditional distribution from the <output> distribution
-        and the <λ> parameter.  The conditional probability matrix is such that
+        and the <lambda_> parameter.  The conditional probability matrix is such that
         cond[i, j] corresponds to P(x^_j | x_i)
         """
-        cond = output * np.exp(λ * self.dist_matrix)
+        cond = output * np.exp(lambda_ * self.dist_matrix)
         cond = cond / cond.sum(1)[:, np.newaxis]  # normalize
         return cond
 
