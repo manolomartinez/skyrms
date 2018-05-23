@@ -143,9 +143,8 @@ class RDT:
         and the <lambda_> parameter.  The conditional probability matrix is such that
         cond[i, j] corresponds to P(x^_j | x_i)
         """
-        cond = output * np.exp(lambda_ * self.dist_matrix)
-        cond = cond / cond.sum(1)[:, np.newaxis]  # normalize
-        return cond
+        cond = output.reshape(-1, 1) * np.exp(lambda_ * self.dist_matrix)
+        return normalize_axis(cond, 1)
 
     def calc_distortion(self, cond):
         """
