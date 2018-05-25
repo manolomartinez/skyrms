@@ -16,7 +16,7 @@ class Information:
         self.sender = sender
         self.receiver = receiver
         self.game = game
-        if self.game.game.chance_node:
+        if self.game.chance_node:
             self.state_chances = game.state_chances
             self.msg_cond_on_states, self.acts_cond_on_msg = (self.sender,
                                                               self.receiver)
@@ -143,8 +143,8 @@ class RDT:
         and the <lambda_> parameter.  The conditional probability matrix is such that
         cond[i, j] corresponds to P(x^_j | x_i)
         """
-        cond = output.reshape(-1, 1) * np.exp(lambda_ * self.dist_matrix)
-        return normalize_axis(cond, 1)
+        cond = output * np.exp(-lambda_ * self.dist_matrix.T)
+        return normalize_axis(cond, 0)
 
     def calc_distortion(self, cond):
         """
