@@ -98,7 +98,7 @@ class Chance:
         mixedstratsender = sendertypes * senderpop[:, np.newaxis, np.newaxis]
         return sum(mixedstratsender)
 
-    def calcuate_receiver_mixed_strat(self, receivertypes, receiverpop):
+    def calculate_receiver_mixed_strat(self, receivertypes, receiverpop):
         mixedstratreceiver = receivertypes * receiverpop[:, np.newaxis,
                                                          np.newaxis]
         return sum(mixedstratreceiver)
