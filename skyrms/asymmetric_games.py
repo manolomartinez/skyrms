@@ -83,7 +83,8 @@ class Chance:
         receiver strat j in position <i, j>
         """
         payoff_ij = np.vectorize(lambda i, j: self.payoff(sender_strats[i],
-                                                          receiver_strats[j]))
+                                                          receiver_strats[j]),
+                                 dtype=int)
         shape_result = (sender_strats.shape[0], receiver_strats.shape[0])
         return np.fromfunction(payoff_ij, shape_result)
 
