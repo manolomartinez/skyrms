@@ -10,6 +10,36 @@ import itertools as it
 import numpy as np
 
 
+def one_basin_discrete(game, trials, times):
+    """
+    Calculate evolutions for <trials> starting points of <game> (which is an
+    instance of game.Evolve), in <times> (an instance of game.Times)
+    """
+    pool = multiprocessing.Pool(None)
+    remain = trials
+    # nash = s.Nash(game)
+    newsols = pool.imap_unordered(one_basin_discrete_aux, zip(range(remain),
+                                                              it.repeat(game),
+                                                              it.repeat(times)))
+    data = np.array([sol for sol in newsols])
+    pool.close()
+    pool.join()
+    return data
+
+
+def one_basin_discrete_aux(triple):
+    """
+    Calculate the one_basin loop using replicator_discrete
+    """
+    np.random.seed()
+    print("trial {}".format(triple[0]))
+    game = triple[1]
+    times = triple[2]
+    sols = game.replicator_discrete(game.random_sender(),
+                                    game.random_receiver(), times)
+    return sols
+
+
 def one_basin_mixed(game, trials, times):
     """
     Calculate evolutions for <trials> starting points of <game> (which is an
