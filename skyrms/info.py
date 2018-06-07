@@ -137,6 +137,26 @@ class RDT:
             distortion = new_distortion
         return rate, new_distortion
 
+    def blahut_berger(self, s_):
+        """
+        Calculate the point in the R(D)-D curve with slope given by
+        s. Follows Berger (2003), p. 2074)
+        """
+        qr = np.ones(self.outcomes) / self.outcomes
+        lambda_ = 1 / ((qr * np.exp(s_ * self.dist_matrix)).sum(1))
+        cr =  ((self.pmf * lambda_)[..., None] * np.exp(s_ *
+                                                        self.dist_matrix)).sum(0)
+        while np.max(cr) >= 1 + self.epsilon:
+            qr = cr * qr
+            lambda_ = 1 / ((qr * np.exp(s_ * self.dist_matrix)).sum(1))
+            cr =  ((self.pmf * lambda_)[..., None] * np.exp(s_ *
+                                                            self.dist_matrix)).sum(0)
+        distortion = np.sum((self.pmf * lambda_)[..., None] * (qr * np.exp(s_ *
+                                                                           self.dist_matrix)
+                                                               * self.dist_matrix))
+        rate = s_ * distortion + np.sum(self.pmf * np.log2(lambda_))
+        return rate, distortion
+
     def update_conditional(self, lambda_, output):
         """
         Calculate a new conditional distribution from the <output> distribution
@@ -159,7 +179,7 @@ class RDT:
         Calculate the rate for a channel (given by <cond>) and output
         distribution (given by <output>)
         """
-        return np.sum(self.pmf @ (cond * np.log2(cond / output)))
+        return np.sum(self.pmf @ (cond * np.ma.log2(cond / output).filled(0)))
 
 
 class Shea:
