@@ -137,20 +137,22 @@ class RDT:
             distortion = new_distortion
         return rate, new_distortion
 
-    def blahut_berger(self, s_):
+    def blahut_berger(self, s_, max_rounds=100):
         """
         Calculate the point in the R(D)-D curve with slope given by
         s. Follows Berger (2003), p. 2074)
         """
         qr = np.ones(self.outcomes) / self.outcomes
         lambda_ = 1 / ((qr * np.exp(s_ * self.dist_matrix)).sum(1))
-        cr =  ((self.pmf * lambda_)[..., None] * np.exp(s_ *
+        cr = ((self.pmf * lambda_)[..., None] * np.exp(s_ *
                                                         self.dist_matrix)).sum(0)
-        while np.max(cr) >= 1 + self.epsilon:
+        rounds = 0
+        while np.max(cr) >= 1 + self.epsilon and rounds <= max_rounds:
             qr = cr * qr
             lambda_ = 1 / ((qr * np.exp(s_ * self.dist_matrix)).sum(1))
             cr =  ((self.pmf * lambda_)[..., None] * np.exp(s_ *
                                                             self.dist_matrix)).sum(0)
+            rounds = rounds + 1
         distortion = np.sum((self.pmf * lambda_)[..., None] * (qr * np.exp(s_ *
                                                                            self.dist_matrix)
                                                                * self.dist_matrix))
