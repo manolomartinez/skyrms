@@ -117,7 +117,7 @@ class RDT:
         """
         return self.blahut(*args)
 
-    def blahut(self, lambda_):
+    def blahut(self, lambda_, return_cond=False):
         """
         Calculate the point in the R(D)-D curve with slope given by
         self.calc_s(<k>). Follows Cover & Thomas 2006, p. 334
@@ -135,7 +135,11 @@ class RDT:
             rate = self.calc_rate(cond, output)
             delta_dist = np.abs(new_distortion - distortion)
             distortion = new_distortion
-        return rate, new_distortion
+        if return_cond:
+            tuple = (rate, distortion, cond)
+        else:
+            tuple = (rate, distortion)
+        return tuple
 
     def blahut_berger(self, s_, max_rounds=100):
         """
