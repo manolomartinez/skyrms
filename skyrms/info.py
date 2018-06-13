@@ -142,17 +142,30 @@ class RDT:
         Calculate the point in the R(D)-D curve with slope given by
         s. Follows Berger (2003), p. 2074)
         """
-        qr = np.ones(self.outcomes) / self.outcomes
+        # qr = np.ones(self.outcomes) / self.outcomes
+        qr = self.pmf
         lambda_ = 1 / ((qr * np.exp(s_ * self.dist_matrix)).sum(1))
         cr = ((self.pmf * lambda_)[..., None] * np.exp(s_ *
                                                         self.dist_matrix)).sum(0)
+        distortion = np.sum((self.pmf * lambda_)[..., None] * (qr * np.exp(s_ *
+                                                                           self.dist_matrix)
+                                                               * self.dist_matrix))
+        rate = s_ * distortion + np.sum(self.pmf * np.log2(lambda_))
+        delta_dist = 2 * self.epsilon
         rounds = 0
-        while np.max(cr) >= 1 + self.epsilon and rounds <= max_rounds:
+        while delta_dist > self.epsilon and rounds <= max_rounds:
             qr = cr * qr
             lambda_ = 1 / ((qr * np.exp(s_ * self.dist_matrix)).sum(1))
-            cr =  ((self.pmf * lambda_)[..., None] * np.exp(s_ *
-                                                            self.dist_matrix)).sum(0)
+            cr = ((self.pmf * lambda_)[..., None] * np.exp(s_ *
+                                                           self.dist_matrix)).sum(0)
+            distortion = np.sum((self.pmf * lambda_)[..., None] * (qr * np.exp(s_ *
+                                                                                   self.dist_matrix)
+                                                                       * self.dist_matrix))
+            new_rate = s_ * distortion + np.sum(self.pmf * np.log2(lambda_))
+            delta_dist = np.abs(new_rate - rate)
             rounds = rounds + 1
+            if rounds == max_rounds:
+                print("Max rounds")
         distortion = np.sum((self.pmf * lambda_)[..., None] * (qr * np.exp(s_ *
                                                                            self.dist_matrix)
                                                                * self.dist_matrix))
