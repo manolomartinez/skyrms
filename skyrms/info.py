@@ -173,7 +173,7 @@ class RDT:
         cond[i, j] corresponds to P(x^_j | x_i)
         """
         cond = output * np.exp(-lambda_ * self.dist_matrix.T)
-        return normalize_axis(cond, 0)
+        return normalize_axis(cond, 1)
 
     def calc_distortion(self, cond):
         """
