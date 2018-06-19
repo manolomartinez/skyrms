@@ -63,22 +63,24 @@ class Information:
 
 class RDT:
     """
-    Calculate the rate-distortion function for a game and a disortion measure
+    Calculate the rate-distortion function for a game and one or two disortion
+    measures
     """
-    def __init__(self, game, distortion_matrix, epsilon=0.001):
+    def __init__(self, game, distortion_tensor, epsilon=0.001):
         """
         Parameters
         ----------
         game: a skyrms.asymmetric_games.Chance object
-        distortion_matrix: a distortion_matrix (same dimension as payoff
-        matrices)
+
+        distortion_tensor: a collection of distortion matrices (same dimensions as payoff
+        matrices), stacked along axis 2
 
         epsilon: the precision up to which the point should be calculated
         """
         self.pmf = game.state_chances
         self.outcomes = len(self.pmf)
         self.epsilon = epsilon
-        self.dist_matrix = distortion_matrix
+        self.dist_tensor = distortion_tensor
 
 
     def all_points(self, iterator=None, outputfile=None):
@@ -141,6 +143,31 @@ class RDT:
             tuple = (rate, distortion)
         return tuple
 
+    def blahut_two(self, lambda_, return_cond=False):
+        """
+        Calculate the point in the R(D, D') surface with slopes given by
+        lambda_ and mu_. Follows Cover & Thomas 2006, p. 334
+        """
+        # we start with the uniform output distribution
+        params = len(lambda_)
+        output = np.ones(self.outcomes) / self.outcomes
+        cond = self.update_conditional(lambda_, output)
+        rate = self.calc_rate(cond, output)
+        delta_dist = 2 * self.epsilon
+        while delta_dist > self.epsilon:
+            output = self.pmf @ cond
+            cond = self.update_conditional(lambda_, output)
+            new_rate = self.calc_rate(cond, output)
+            delta_dist = np.abs(new_rate - rate)
+            rate = new_rate
+        distortion = [self.calc_distortion(cond, matrix) for matrix in
+                      range(params)]
+        if return_cond:
+            return_tuple = (rate, distortion, cond)
+        else:
+            return_tuple = (rate, distortion)
+        return return_tuple
+
     def blahut_berger(self, s_, max_rounds=100):
         """
         Calculate the point in the R(D)-D curve with slope given by
@@ -169,19 +196,22 @@ class RDT:
     def update_conditional(self, lambda_, output):
         """
         Calculate a new conditional distribution from the <output> distribution
-        and the <lambda_> parameter.  The conditional probability matrix is such that
+        and the <lambda_> parameters.  The conditional probability matrix is such that
         cond[i, j] corresponds to P(x^_j | x_i)
         """
-        cond = output * np.exp(-lambda_ * self.dist_matrix.T)
+        params = len(lambda_)
+        axes =tuple([Ellipsis] + [np.newaxis] * params)
+        lagrange = (lambda_[axes] * self.dist_tensor).sum(0)
+        cond = output * np.exp(lagrange)
         return normalize_axis(cond, 1)
 
-    def calc_distortion(self, cond):
+    def calc_distortion(self, cond, matrix):
         """
         Calculate the distortion for a given channel (individuated by the
-        conditional matrix in <cond>
+        conditional matrix in <cond>), for a certain slice of self.dist_tensor
         """
         # return np.sum(self.pmf @ (cond * self.dist_matrix))
-        return np.matmul(self.pmf, (cond * self.dist_matrix)).sum()
+        return np.matmul(self.pmf, (cond * self.dist_tensor[matrix])).sum()
 
     def calc_rate(self, cond, output):
         """
