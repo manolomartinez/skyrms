@@ -163,9 +163,9 @@ class RDT:
         distortion = [self.calc_distortion(cond, matrix) for matrix in
                       range(params)]
         if return_cond:
-            return_tuple = (rate, distortion, cond)
+            return_tuple = (rate, *distortion, cond)
         else:
-            return_tuple = (rate, distortion)
+            return_tuple = (rate, *distortion)
         return return_tuple
 
     def blahut_berger(self, s_, max_rounds=100):
