@@ -201,7 +201,7 @@ class RDT:
         """
         params = len(lambda_)
         axes =tuple([Ellipsis] + [np.newaxis] * params)
-        lagrange = (lambda_[axes] * self.dist_tensor).sum(0)
+        lagrange = (-1 * lambda_[axes] * self.dist_tensor).sum(0)
         cond = output * np.exp(lagrange)
         return normalize_axis(cond, 1)
 
