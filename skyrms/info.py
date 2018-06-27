@@ -490,9 +490,9 @@ def escalar_product_map(matrix, vector):
 
 def normalize_vector(vector):
     """
-    Normalize a vector, leaving all-zero vector as they are
+    Normalize a vector, converting all-zero vectors to uniform ones
     """
     if np.allclose(vector, np.zeros_like(vector)):
-        return vector
+        return np.ones_like(vector) / len(vector)
     else:
         return vector / sum(vector)
