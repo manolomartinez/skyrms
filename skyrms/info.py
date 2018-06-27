@@ -172,31 +172,6 @@ class RDT:
             return_tuple = (rate, *distortion)
         return return_tuple
 
-    def blahut_berger(self, s_, max_rounds=100):
-        """
-        Calculate the point in the R(D)-D curve with slope given by
-        s. Follows Berger (2003), p. 2074)
-        """
-        # qr = np.ones(self.outcomes) / self.outcomes
-        qr = self.pmf
-        lambda_ = 1 / ((qr * np.exp(s_ * self.dist_matrix)).sum(1))
-        cr = ((self.pmf * lambda_)[..., None] * np.exp(s_ *
-                                                        self.dist_matrix)).sum(0)
-        rounds = 0
-        while max(cr) > 1 + self.epsilon and rounds <= max_rounds:
-            qr = cr * qr
-            lambda_ = 1 / ((qr * np.exp(s_ * self.dist_matrix)).sum(1))
-            cr = ((self.pmf * lambda_)[..., None] * np.exp(s_ *
-                                                           self.dist_matrix)).sum(0)
-            rounds = rounds + 1
-            if rounds == max_rounds:
-                print("Max rounds")
-        distortion = np.sum((self.pmf * lambda_)[..., None] * (qr * np.exp(s_ *
-                                                                           self.dist_matrix)
-                                                               * self.dist_matrix))
-        rate = s_ * distortion + np.sum(self.pmf * np.log2(lambda_))
-        return rate, distortion
-
     def update_conditional(self, lambda_, output):
         """
         Calculate a new conditional distribution from the <output> distribution
