@@ -143,7 +143,7 @@ class RDT:
             tuple = (rate, distortion)
         return tuple
 
-    def blahut_two(self, lambda_, return_cond=False):
+    def blahut_two(self, lambda_, max_rounds=100, return_cond=False):
         """
         Calculate the point in the R(D, D') surface with slopes given by
         lambda_ and mu_. Follows Cover & Thomas 2006, p. 334
@@ -154,12 +154,16 @@ class RDT:
         cond = self.update_conditional(lambda_, output)
         rate = self.calc_rate(cond, output)
         delta_dist = 2 * self.epsilon
-        while delta_dist > self.epsilon:
+        rounds = 0
+        while delta_dist > self.epsilon and rounds <= max_rounds:
             output = self.pmf @ cond
             cond = self.update_conditional(lambda_, output)
             new_rate = self.calc_rate(cond, output)
             delta_dist = np.abs(new_rate - rate)
             rate = new_rate
+            rounds = rounds + 1
+            if rounds == max_rounds:
+                print("Max rounds for {}".format(lambda_))
         distortion = [self.calc_distortion(cond, matrix) for matrix in
                       range(params)]
         if return_cond:
