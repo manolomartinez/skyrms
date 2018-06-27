@@ -199,6 +199,20 @@ class RDT:
         """
         return np.sum(self.pmf @ (cond * np.ma.log2(cond / output).filled(0)))
 
+    def from_cond_to_RD(self, cond, dist_measures):
+        """
+        Take a channel matrix, cond, where cond[i, j] gives P(q^[j] | q[i]),
+        and calculate rate and distortions for it.
+        <dist_measures> is a list of integers stating which distortion measures
+        we want.
+        """
+        output = self.pmf @ cond
+        rate = self.calc_rate(cond, output)
+        distortion = [self.calc_distortion(cond, matrix) for matrix in
+                      dist_measures]
+        return (rate, *distortion)
+
+
 
 class Shea:
     """
