@@ -78,7 +78,7 @@ class RDT:
         epsilon: the precision up to which the point should be calculated
         """
         self.pmf = game.state_chances
-        self.outcomes = len(self.pmf)
+        self.outcomes = distortion_tensor.shape[-1]
         self.epsilon = epsilon
         self.dist_tensor = distortion_tensor
 
