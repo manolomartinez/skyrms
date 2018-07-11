@@ -5,6 +5,7 @@ from itertools import repeat
 import multiprocessing
 
 import numpy as np
+import scipy.optimize as opt
 
 class Information:
     """
@@ -162,6 +163,100 @@ class RDT:
                       dist_measures]
         return (rate, *distortion)
 
+
+class Optimize(RDT):
+    """
+    A class to run a scipy optimizer on rate-distortion problems
+    """
+    def __init__(self, game, dist_measures, dist_tensor=None, epsilon=1e-4):
+        """
+        Parameters
+        ----------
+
+        dist_measures: A list of integers with the distortions from
+        self.dist_tensor to be considered
+        """
+        RDT.__init__(self, game, dist_tensor, epsilon)
+        self.dist_measures = dist_measures
+
+    def make_calc_RD(self):
+        """
+        Return a function that calculates an RD (hyper-)surface using the
+        trust-constr scipy optimizer, for a given list of distortion
+        objectives.
+        """
+        default_cond_init = self.cond_init()
+        hess = opt.BFGS(exception_strategy='skip_update')
+        bounds = opt.Bounds([0] * self.pmf * self.outcomes, [1] * self.pmf *
+                            self.outcomes)
+
+        def calc_RD(distortions, cond_init=default_cond_init, return_obj=False):
+            result = opt.minimize(self.rate, cond_init, method="trust-constr",
+                                  jac='2-point', hess=hess,
+                                  constraints=[self.gen_lin_constraint(self.dist_measures,
+                                                                       distortions)],
+                                  bounds=bounds)
+            if return_obj:
+                return result.status, result.fun, result
+            return result.status, result.fun
+
+        return calc_RD
+
+    def rate(self, cond_flat):
+        """
+        Calculate rate for make_calc_RD()
+        """
+        cond = cond_flat.reshape(self.pmf, self.outcomes)
+        output = self.pmf @ cond
+        return self.calc_rate(cond, output)
+
+    def cond_init(self):
+        """
+        Return an initial conditional matrix
+        """
+        return np.ones((self.pmf, self.outcomes)) / self.outcomes
+
+    def gen_lin_constraint(self, dist_measures, distortions):
+        """
+        Generate the LinearConstraint object
+
+        Parameters
+        ----------
+
+        dist_measures: A list of integers, corresponding to matrices in
+        self.disdist_tensor
+        distortions: A list of distortion objectives
+
+        dist_measures and distortions must have the same length
+        """
+        const = self.lin_constraint(dist_measures)
+        linear_constraint = opt.LinearConstraint(const, [0, 0] + [1] *
+                                                 self.pmf, distortions
+                                                 + [1] * self.pmf)
+        return linear_constraint
+
+    def lin_constraint(self, dist_measures):
+        """
+        Collate all constraints
+        """
+        distortion = self.dist_constraint(dist_measures)
+        prob = self.prob_constraint()
+        return np.vstack((distortion, prob))
+
+    def dist_constraint(self, dist_measures):
+        """
+	Present the distortion constraint (which is linear) the way scipy.optimize expects it
+	"""
+        return np.array([(self.pmf[:, np.newaxis] * self.dist_tensor[measure]).flatten() for
+                         measure in dist_measures])
+
+    def prob_constraint(self):
+        """
+	Present the constraint that all rows in cond be probability vectors
+	"""
+        template = np.identity(self.pmf)
+        return np.repeat(template, self.outcomes).reshape(self.pmf, self.pmf *
+                                                          self.outcomes)
 
 
 class Shea:
