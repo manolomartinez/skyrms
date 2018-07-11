@@ -181,8 +181,7 @@ class Optimize(RDT):
         else:
             self.dist_measures = range(self.dist_tensor.shape[0])
         self.hess = opt.BFGS(exception_strategy='skip_update')
-        self.bounds = opt.Bounds([0] * (self.states * self.outcomes), [1] *
-                            (self.states * self.outcomes))
+        self.bounds = opt.Bounds(0, 1)
         self.constraint = self.lin_constraint(self.dist_measures)
         self.default_cond_init = self.cond_init()
 
