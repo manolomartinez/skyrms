@@ -218,17 +218,13 @@ class Optimize(RDT):
         """
         return np.ones((self.states * self.outcomes)) / self.outcomes
 
-    def gen_lin_constraint(self, constraint, distortions):
+    def gen_lin_constraint(self, distortions):
         """
         Generate the LinearConstraint object
 
         Parameters
         ----------
-
-        constraint: the result of appying lin_constraint
         distortions: A list of distortion objectives
-
-        dist_measures and distortions must have the same length
         """
         linear_constraint = opt.LinearConstraint(self.constraint, [0, 0] + [1] *
                                                  self.states, distortions
