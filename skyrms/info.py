@@ -175,11 +175,11 @@ class Optimize(RDT):
         self.dist_tensor to be considered
         """
         RDT.__init__(self, game, dist_tensor, epsilon)
+        self.states = len(self.pmf)
         if dist_measures:
             self.dist_measures = dist_measures
         else:
             self.dist_measures = range(self.dist_tensor.shape[0])
-
 
     def make_calc_RD(self):
         """
@@ -189,7 +189,8 @@ class Optimize(RDT):
         """
         default_cond_init = self.cond_init()
         hess = opt.BFGS(exception_strategy='skip_update')
-        bounds = opt.Bounds([0] * self.pmf * self.outcomes, [1] * self.pmf *
+        bounds = opt.Bounds([0] * self.states * self.outcomes, [1] *
+                            self.statesstates *
                             self.outcomes)
 
         def calc_RD(distortions, cond_init=default_cond_init, return_obj=False):
@@ -208,7 +209,7 @@ class Optimize(RDT):
         """
         Calculate rate for make_calc_RD()
         """
-        cond = cond_flat.reshape(self.pmf, self.outcomes)
+        cond = cond_flat.reshape(self.states, self.outcomes)
         output = self.pmf @ cond
         return self.calc_rate(cond, output)
 
@@ -216,7 +217,7 @@ class Optimize(RDT):
         """
         Return an initial conditional matrix
         """
-        return np.ones((self.pmf, self.outcomes)) / self.outcomes
+        return np.ones((self.states, self.outcomes)) / self.outcomes
 
     def gen_lin_constraint(self, dist_measures, distortions):
         """
@@ -233,8 +234,8 @@ class Optimize(RDT):
         """
         const = self.lin_constraint(dist_measures)
         linear_constraint = opt.LinearConstraint(const, [0, 0] + [1] *
-                                                 self.pmf, distortions
-                                                 + [1] * self.pmf)
+                                                 self.states, distortions
+                                                 + [1] * self.states)
         return linear_constraint
 
     def lin_constraint(self, dist_measures):
@@ -250,7 +251,7 @@ class Optimize(RDT):
         Present the distortion constraint (which is linear) the way
         scipy.optimize expects it
         """
-        return np.array([(self.pmf[:, np.newaxis] *
+        return np.array([(self.states[:, np.newaxis] *
                           self.dist_tensor[measure]).flatten() for
                          measure in dist_measures])
 
@@ -258,8 +259,9 @@ class Optimize(RDT):
         """
 	Present the constraint that all rows in cond be probability vectors
 	"""
-        template = np.identity(self.pmf)
-        return np.repeat(template, self.outcomes).reshape(self.pmf, self.pmf *
+        template = np.identity(self.states)
+        return np.repeat(template, self.outcomes).reshape(self.states,
+                                                          self.states *
                                                           self.outcomes)
 
 
