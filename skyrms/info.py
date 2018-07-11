@@ -226,7 +226,7 @@ class Optimize(RDT):
         distortions: A list of distortion objectives
         """
         linear_constraint = opt.LinearConstraint(self.constraint, [0, 0] + [1] *
-                                                 self.states, distortions
+                                                 self.states, list(distortions)
                                                  + [1] * self.states)
         return linear_constraint
 
