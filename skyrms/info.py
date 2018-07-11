@@ -166,7 +166,7 @@ class Optimize(RDT):
     """
     A class to run a scipy optimizer on rate-distortion problems
     """
-    def __init__(self, game, dist_measures, dist_tensor=None, epsilon=1e-4):
+    def __init__(self, game, dist_measures=None, dist_tensor=None, epsilon=1e-4):
         """
         Parameters
         ----------
@@ -175,7 +175,11 @@ class Optimize(RDT):
         self.dist_tensor to be considered
         """
         RDT.__init__(self, game, dist_tensor, epsilon)
-        self.dist_measures = dist_measures
+        if dist_measures:
+            self.dist_measures = dist_measures
+        else:
+            self.dist_measures = range(self.dist_tensor.shape[0])
+
 
     def make_calc_RD(self):
         """
@@ -243,9 +247,11 @@ class Optimize(RDT):
 
     def dist_constraint(self, dist_measures):
         """
-	Present the distortion constraint (which is linear) the way scipy.optimize expects it
-	"""
-        return np.array([(self.pmf[:, np.newaxis] * self.dist_tensor[measure]).flatten() for
+        Present the distortion constraint (which is linear) the way
+        scipy.optimize expects it
+        """
+        return np.array([(self.pmf[:, np.newaxis] *
+                          self.dist_tensor[measure]).flatten() for
                          measure in dist_measures])
 
     def prob_constraint(self):
