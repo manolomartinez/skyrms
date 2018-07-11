@@ -94,31 +94,6 @@ class RDT:
                          normalize_distortion(self.game.receiver_payoff_matrix)])
 
 
-    def blahut(self, lambda_, return_cond=False):
-        """
-        Calculate the point in the R(D)-D curve with slope given by
-        self.calc_s(<k>). Follows Cover & Thomas 2006, p. 334
-        """
-        # we start with the uniform output distribution
-        output = np.ones(self.outcomes) / self.outcomes
-        cond = self.update_conditional(lambda_, output)
-        distortion = self.calc_distortion(cond)
-        rate = self.calc_rate(cond, output)
-        delta_dist = 2 * self.epsilon
-        while delta_dist > self.epsilon:
-            output = self.pmf @ cond
-            cond = self.update_conditional(lambda_, output)
-            new_distortion = self.calc_distortion(cond)
-            rate = self.calc_rate(cond, output)
-            delta_dist = np.abs(new_distortion - distortion)
-            distortion = new_distortion
-        if return_cond:
-            tuple = (rate, distortion, cond)
-        else:
-            tuple = (rate, distortion)
-        return tuple
-
-    def blahut_two(self, lambda_, max_rounds=100, return_cond=False):
         """
         Calculate the point in the R(D, D') surface with slopes given by
         lambda_ and mu_. Follows Cover & Thomas 2006, p. 334
