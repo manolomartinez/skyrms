@@ -198,8 +198,8 @@ class Optimize(RDT):
                                   constraints=[self.gen_lin_constraint(distortions)],
                                   bounds=self.bounds)
             if return_obj:
-                return result.status, result.fun, result
-            return result.status, result.fun
+                return np.array([result.status, result.fun]), result
+            return np.array([result.status, result.fun])
 
         return calc_RD
 
