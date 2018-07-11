@@ -189,9 +189,8 @@ class Optimize(RDT):
         """
         default_cond_init = self.cond_init()
         hess = opt.BFGS(exception_strategy='skip_update')
-        bounds = opt.Bounds([0] * self.states * self.outcomes, [1] *
-                            self.states *
-                            self.outcomes)
+        bounds = opt.Bounds([0] * (self.states * self.outcomes), [1] *
+                            (self.states * self.outcomes))
 
         def calc_RD(distortions, cond_init=default_cond_init, return_obj=False):
             result = opt.minimize(self.rate, cond_init, method="trust-constr",
@@ -217,7 +216,7 @@ class Optimize(RDT):
         """
         Return an initial conditional matrix
         """
-        return np.ones((self.states, self.outcomes)) / self.outcomes
+        return np.ones((self.states * self.outcomes)) / self.outcomes
 
     def gen_lin_constraint(self, dist_measures, distortions):
         """
