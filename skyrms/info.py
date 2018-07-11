@@ -93,7 +93,7 @@ class RDT:
         return np.array([normalize_distortion(self.game.sender_payoff_matrix),
                          normalize_distortion(self.game.receiver_payoff_matrix)])
 
-
+    def blahut(self, lambda_, max_rounds=100, return_cond=False):
         """
         Calculate the point in the R(D, D') surface with slopes given by
         lambda_ and mu_. Follows Cover & Thomas 2006, p. 334
@@ -433,7 +433,7 @@ def normalize_vector(vector):
     """
     if np.allclose(vector, np.zeros_like(vector)):
         return np.ones_like(vector) / len(vector)
-        return vector / sum(vector)
+    return vector / sum(vector)
 
 
 def normalize_distortion(matrix):
