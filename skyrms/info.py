@@ -63,24 +63,35 @@ class Information:
 
 class RDT:
     """
-    Calculate the rate-distortion function for a game and one or two disortion
+    Calculate the rate-distortion function for a game and any number of distortion
     measures
     """
-    def __init__(self, game, distortion_tensor, epsilon=0.001):
+    def __init__(self, game, dist_tensor=None, epsilon=0.001):
         """
         Parameters
         ----------
         game: a skyrms.asymmetric_games.Chance object
 
-        distortion_tensor: a collection of distortion matrices (same dimensions as payoff
+        dist_tensor: a collection of distortion matrices (same dimensions as payoff
         matrices), stacked along axis 2
 
         epsilon: the precision up to which the point should be calculated
         """
         self.pmf = game.state_chances
-        self.outcomes = distortion_tensor.shape[-1]
+        self.game = game
         self.epsilon = epsilon
-        self.dist_tensor = distortion_tensor
+        if dist_tensor:
+            self.dist_tensor = dist_tensor
+        else:
+            self.dist_tensor = self.dist_tensor_from_game()
+        self.outcomes = self.dist_tensor.shape[-1]
+
+    def dist_tensor_from_game(self):
+        """
+        Return normalize_distortion() for sender and receiver payoffs
+        """
+        return np.array([normalize_distortion(self.game.sender_payoff_matrix),
+                         normalize_distortion(self.game.receiver_payoff_matrix)])
 
 
     def blahut(self, lambda_, return_cond=False):
