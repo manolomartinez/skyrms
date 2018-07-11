@@ -251,7 +251,7 @@ class Optimize(RDT):
         Present the distortion constraint (which is linear) the way
         scipy.optimize expects it
         """
-        return np.array([(self.states[:, np.newaxis] *
+        return np.array([(self.pmf[:, np.newaxis] *
                           self.dist_tensor[measure]).flatten() for
                          measure in dist_measures])
 
