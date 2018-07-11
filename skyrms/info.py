@@ -180,6 +180,11 @@ class Optimize(RDT):
             self.dist_measures = dist_measures
         else:
             self.dist_measures = range(self.dist_tensor.shape[0])
+        self.hess = opt.BFGS(exception_strategy='skip_update')
+        self.bounds = opt.Bounds([0] * (self.states * self.outcomes), [1] *
+                            (self.states * self.outcomes))
+        self.constraint = self.lin_constraint(self.dist_measures)
+        self.default_cond_init = self.cond_init()
 
     def make_calc_RD(self):
         """
@@ -187,17 +192,12 @@ class Optimize(RDT):
         trust-constr scipy optimizer, for a given list of distortion
         objectives.
         """
-        default_cond_init = self.cond_init()
-        hess = opt.BFGS(exception_strategy='skip_update')
-        bounds = opt.Bounds([0] * (self.states * self.outcomes), [1] *
-                            (self.states * self.outcomes))
 
-        def calc_RD(distortions, cond_init=default_cond_init, return_obj=False):
+        def calc_RD(distortions, cond_init=self.default_cond_init, return_obj=False):
             result = opt.minimize(self.rate, cond_init, method="trust-constr",
-                                  jac='2-point', hess=hess,
-                                  constraints=[self.gen_lin_constraint(self.dist_measures,
-                                                                       distortions)],
-                                  bounds=bounds)
+                                  jac='2-point', hess=self.hess,
+                                  constraints=[self.gen_lin_constraint(distortions)],
+                                  bounds=self.bounds)
             if return_obj:
                 return result.status, result.fun, result
             return result.status, result.fun
@@ -218,21 +218,19 @@ class Optimize(RDT):
         """
         return np.ones((self.states * self.outcomes)) / self.outcomes
 
-    def gen_lin_constraint(self, dist_measures, distortions):
+    def gen_lin_constraint(self, constraint, distortions):
         """
         Generate the LinearConstraint object
 
         Parameters
         ----------
 
-        dist_measures: A list of integers, corresponding to matrices in
-        self.disdist_tensor
+        constraint: the result of appying lin_constraint
         distortions: A list of distortion objectives
 
         dist_measures and distortions must have the same length
         """
-        const = self.lin_constraint(dist_measures)
-        linear_constraint = opt.LinearConstraint(const, [0, 0] + [1] *
+        linear_constraint = opt.LinearConstraint(self.constraint, [0, 0] + [1] *
                                                  self.states, distortions
                                                  + [1] * self.states)
         return linear_constraint
