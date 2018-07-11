@@ -433,7 +433,6 @@ def normalize_vector(vector):
     """
     if np.allclose(vector, np.zeros_like(vector)):
         return np.ones_like(vector) / len(vector)
-    else:
         return vector / sum(vector)
 
 
