@@ -83,42 +83,6 @@ class RDT:
         self.dist_tensor = distortion_tensor
 
 
-    def all_points(self, iterator=None, outputfile=None):
-        """
-        Calculate the R(D) function for as many points as given by <iterator>
-        (all of them by default)
-        Save them to <file>. Each line of the file (row of the array) is [K,
-        distortion, rate]
-        """
-        if not iterator:
-            iterator = range(self.K)
-        return np.array([self.blahut(k, outputfile) for k in
-                         iterator]).T
-
-    def all_points_multiprocessing(self, iterator=None, outputfile=None):
-        """
-        Calculate the R(D) function for as many points as given by <iterator>
-        (all of them by default)
-        Save them to <file>. Each line of the file (row of the array) is [K,
-        distortion, rate]
-        """
-        pool = multiprocessing.Pool(None)
-        if not iterator:
-            iterator = range(self.K)
-        # nash = s.Nash(game)
-        newsols = pool.imap_unordered(self.blahut_mp, zip(iterator,
-                                                          repeat(outputfile)))
-        data = np.array([sol for sol in newsols])
-        pool.close()
-        pool.join()
-        return data.T
-
-    def blahut_mp(self, args):
-        """
-        Unpack args for the official blahut function
-        """
-        return self.blahut(*args)
-
     def blahut(self, lambda_, return_cond=False):
         """
         Calculate the point in the R(D)-D curve with slope given by
