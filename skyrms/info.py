@@ -435,3 +435,15 @@ def normalize_vector(vector):
         return np.ones_like(vector) / len(vector)
     else:
         return vector / sum(vector)
+
+
+def normalize_distortion(matrix):
+    """
+    Normalize linearly so that max corresponds to 0 distortion, and min to 1 distortion
+    It must be a matrix of floats!
+    """
+    maxmatrix = np.max(matrix)
+    minmatrix = np.min(matrix)
+    numerator = maxmatrix - matrix
+    denominator = maxmatrix - minmatrix
+    return np.divide(numerator, denominator, out=np.zeros_like(matrix), where=denominator!=0)
