@@ -190,7 +190,7 @@ class Optimize(RDT):
         default_cond_init = self.cond_init()
         hess = opt.BFGS(exception_strategy='skip_update')
         bounds = opt.Bounds([0] * self.states * self.outcomes, [1] *
-                            self.statesstates *
+                            self.states *
                             self.outcomes)
 
         def calc_RD(distortions, cond_init=default_cond_init, return_obj=False):
