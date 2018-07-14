@@ -162,9 +162,9 @@ class RDT:
         return (rate, *distortion)
 
 
-class Optimize(RDT):
+class OptimizeRate(RDT):
     """
-    A class to run a scipy optimizer on rate-distortion problems
+    A class to calculate rate-distortion surface with a scipy optimizer
     """
     def __init__(self, game, dist_measures=None, dist_tensor=None, epsilon=1e-4):
         """
@@ -255,6 +255,123 @@ class Optimize(RDT):
         return np.repeat(template, self.outcomes).reshape(self.states,
                                                           self.states *
                                                           self.outcomes)
+
+class OptimizeMessageEntropy(RDT):
+    """
+    A class to calculate rate-distortion (where rate is actually the entropy of
+    messages= with a scipy optimizer
+    """
+    def __init__(self, game, dist_measures=None, dist_tensor=None,
+                 messages=None, epsilon=1e-4):
+        """
+        Parameters
+        ----------
+
+        dist_measures: A list of integers with the distortions from
+        self.dist_tensor to be considered
+        """
+        RDT.__init__(self, game, dist_tensor, epsilon)
+        self.states = len(self.pmf)
+        if dist_measures:
+            self.dist_measures = dist_measures
+        else:
+            self.dist_measures = range(self.dist_tensor.shape[0])
+        if messages:
+            self.messages = messages
+        else:
+            self.messages = self.states
+        self.enc_dec_length = self.messages * (self.states + self.outcomes)
+        # length of the encoder_decoder vector we optimize over.
+        self.hess = opt.BFGS(exception_strategy='skip_update')
+        self.bounds = opt.Bounds(0, 1)
+        self.constraint = self.lin_constraint(self.dist_measures)
+        self.default_enc_dec_init = self.enc_dec_init()
+
+    def make_calc_RD(self):
+        """
+        Return a function that calculates an RD (hyper-)surface using the
+        trust-constr scipy optimizer, for a given list of distortion
+        objectives.
+        """
+
+        def calc_RD(distortions, enc_dec_init=self.default_enc_dec_init, return_obj=False):
+            result = opt.minimize(self.message_entropy, enc_dec_init, method="trust-constr",
+                                  jac='2-point', hess=self.hess,
+                                  constraints=[self.gen_lin_constraint(distortions)],
+                                  bounds=self.bounds)
+            if return_obj:
+                return np.array([result.status, result.fun]), result
+            return np.array([result.status, result.fun])
+
+        return calc_RD
+
+    def message_entropy(self, encode_decode):
+        """
+        Calculate message entropy given an encoder-decoder pair, where the two
+        matrices are flattened and then concatenated
+        """
+        encoder_flat, _ = np.split(encode_decode, [self.states * self.messages,
+                                                   self.outcomes])
+        encoder = encoder_flat.reshape(self.states, self.messages)
+        message_probs = self.pmf @ encoder
+        return entropy(message_probs)
+
+    def enc_dec_init(self):
+        """
+        Return an initial conditional matrix
+        """
+        encoder = np.ones((self.states * self.messages)) / self.messages
+        decoder = np.ones((self.messages * self.outcomes)) / self.outcomes
+        return np.concatenate((encoder, decoder))
+
+    def gen_lin_constraint(self, distortions):
+        """
+        Generate the LinearConstraint object
+
+        Parameters
+        ----------
+        distortions: A list of distortion objectives
+        """
+        linear_constraint = opt.LinearConstraint(
+            self.constraint, [0, 0] + [1] * (self.states + self.messages),
+            list(distortions) + [1] * (self.states + self.messages))
+        return linear_constraint
+
+    def lin_constraint(self, dist_measures):
+        """
+        Collate all constraints
+        """
+        distortion = self.dist_constraint(dist_measures)
+        prob = self.prob_constraint()
+        return np.vstack((distortion, prob))
+
+    def dist_constraint(self, dist_measures):
+        """
+        Present the distortion constraint (which is linear) the way
+        scipy.optimize expects it
+        """
+        return np.array([(self.pmf[:, np.newaxis] *
+                          self.dist_tensor[measure]).flatten() for
+                         measure in dist_measures])
+
+    def prob_constraint(self):
+        """
+        Present the constraint that all rows in encoder and decoder be
+        probability vectors 
+        """
+        template_encoder = np.identity(self.states)
+        template_decoder = np.identity(self.messages)
+        upper_left = np.repeat(template_encoder, self.messages).reshape(
+            self.states, self.states * self.messages)
+        lower_right = np.repeat(template_decoder,
+                                self.outcomes).reshape(self.messages,
+                                                       self.messages *
+                                                       self.outcomes)
+        upper_right = np.zeros_like(upper_left)
+        lower_left = np.zeros_like(lower_right)
+        upper = np.hstac((upper_left, upper_right))
+        lower = np.hstack((lower_left, lower_right))
+        return np.vstack((upper, lower))
 
 
 class Shea:
