@@ -369,7 +369,7 @@ class OptimizeMessageEntropy(RDT):
                                                        self.outcomes)
         upper_right = np.zeros_like(upper_left)
         lower_left = np.zeros_like(lower_right)
-        upper = np.hstac((upper_left, upper_right))
+        upper = np.hstack((upper_left, upper_right))
         lower = np.hstack((lower_left, lower_right))
         return np.vstack((upper, lower))
 
