@@ -249,12 +249,15 @@ class OptimizeRate(RDT):
 
     def prob_constraint(self):
         """
-	Present the constraint that all rows in cond be probability vectors
+	Present the constraint that all rows in cond be probability vectors. We
+        use a COO sparse matrix
 	"""
-        template = np.identity(self.states)
-        return np.repeat(template, self.outcomes).reshape(self.states,
-                                                          self.states *
-                                                          self.outcomes)
+        from scipy.sparse import coo_matrix
+        row_length = self.states ** 2
+        data = np.ones(row_length)
+        rows = np.repeat(np.arange(self.states), self.states)
+        columns = np.arange(row_length)
+        return coo_matrix((data, (rows, columns)))
 
 class OptimizeMessageEntropy(RDT):
     """
