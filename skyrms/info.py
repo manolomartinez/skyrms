@@ -4,6 +4,7 @@ Information-theoretic analyses
 
 import numpy as np
 import scipy.optimize as opt
+from scipy import sparse
 
 class Information:
     """
@@ -236,7 +237,7 @@ class OptimizeRate(RDT):
         """
         distortion = self.dist_constraint(dist_measures)
         prob = self.prob_constraint()
-        return np.vstack((distortion, prob))
+        return sparse.vstack((distortion, prob))
 
     def dist_constraint(self, dist_measures):
         """
@@ -252,12 +253,11 @@ class OptimizeRate(RDT):
 	Present the constraint that all rows in cond be probability vectors. We
         use a COO sparse matrix
 	"""
-        from scipy.sparse import coo_matrix
         row_length = self.states ** 2
         data = np.ones(row_length)
         rows = np.repeat(np.arange(self.states), self.states)
         columns = np.arange(row_length)
-        return coo_matrix((data, (rows, columns)))
+        return sparse.coo_matrix((data, (rows, columns)))
 
 class OptimizeMessageEntropy(RDT):
     """
