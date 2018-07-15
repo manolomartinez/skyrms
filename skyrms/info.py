@@ -192,16 +192,15 @@ class OptimizeRate(RDT):
         trust-constr scipy optimizer, for a given list of distortion
         objectives.
         """
-
-        def calc_RD(distortions, cond_init=self.default_cond_init, return_obj=False):
+        def calc_RD(distortions, cond_init=self.default_cond_init,
+                    return_obj=False, **kwargs):
             result = opt.minimize(self.rate, cond_init, method="trust-constr",
                                   jac='2-point', hess=self.hess,
                                   constraints=[self.gen_lin_constraint(distortions)],
-                                  bounds=self.bounds)
+                                  bounds=self.bounds, **kwargs)
             if return_obj:
                 return np.array([result.status, result.fun]), result
             return np.array([result.status, result.fun])
-
         return calc_RD
 
     def rate(self, cond_flat):
