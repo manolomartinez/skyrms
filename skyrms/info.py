@@ -80,7 +80,7 @@ class RDT:
         self.pmf = game.state_chances
         self.game = game
         self.epsilon = epsilon
-        if dist_tensor:
+        if type(dist_tensor) == np.ndarray:
             self.dist_tensor = dist_tensor
         else:
             self.dist_tensor = self.dist_tensor_from_game()
