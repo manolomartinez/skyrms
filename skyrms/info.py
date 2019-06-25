@@ -177,6 +177,7 @@ class OptimizeRate(RDT):
         """
         RDT.__init__(self, game, dist_tensor, epsilon)
         self.states = len(self.pmf)
+        self.acts = game.acts
         if dist_measures:
             self.dist_measures = dist_measures
         else:
@@ -252,7 +253,7 @@ class OptimizeRate(RDT):
 	Present the constraint that all rows in cond be probability vectors. We
         use a COO sparse matrix
 	"""
-        row_length = self.states ** 2
+        row_length = self.states * self.acts
         data = np.ones(row_length)
         rows = np.repeat(np.arange(self.states), self.states)
         columns = np.arange(row_length)
@@ -286,8 +287,8 @@ class OptimizeMessageEntropy(RDT):
         # length of the encoder_decoder vector we optimize over.
         self.hess = opt.BFGS(exception_strategy='skip_update')
         self.bounds = opt.Bounds(0, 1)
-        self.constraint = self.lin_constraint(self.dist_measures)
         self.default_enc_dec_init = self.enc_dec_init()
+
 
     def make_calc_RD(self):
         """
@@ -299,7 +300,8 @@ class OptimizeMessageEntropy(RDT):
         def calc_RD(distortions, enc_dec_init=self.default_enc_dec_init, return_obj=False):
             result = opt.minimize(self.message_entropy, enc_dec_init, method="trust-constr",
                                   jac='2-point', hess=self.hess,
-                                  constraints=[self.gen_lin_constraint(distortions)],
+                                  constraints=([self.gen_lin_constraint()] +
+                                               self.gen_nonlin_constraint(distortions)),
                                   bounds=self.bounds)
             if return_obj:
                 return np.array([result.status, result.fun]), result
@@ -307,16 +309,45 @@ class OptimizeMessageEntropy(RDT):
 
         return calc_RD
 
+
+    def minimize_distortion(self, matrix):
+        """
+        Return a function that finds an encoder-decoder pair, with the
+        requisite dimension, that minimizes a single distortion objective, using a
+        trust-constr scipy optimizer        
+        """
+
+        def min_dist(enc_dec_init=self.default_enc_dec_init, return_obj=False):
+            result = opt.minimize(self.gen_dist_func(matrix), enc_dec_init, method="trust-constr",
+                                  jac='2-point', hess=self.hess,
+                                  constraints=self.gen_lin_constraint(),
+                                  bounds=self.bounds)
+            if return_obj:
+                return np.array([result.status, result.fun]), result
+            return np.array([result.status, result.fun])
+
+        return min_dist
+
     def message_entropy(self, encode_decode):
         """
         Calculate message entropy given an encoder-decoder pair, where the two
         matrices are flattened and then concatenated
         """
-        encoder_flat, _ = np.split(encode_decode, [self.states * self.messages,
-                                                   self.outcomes])
-        encoder = encoder_flat.reshape(self.states, self.messages)
+        encoder = self.reconstruct_enc_dec(encode_decode,
+                                           reconstruct_decoder=False)
         message_probs = self.pmf @ encoder
         return entropy(message_probs)
+
+
+    def reconstruct_enc_dec(self, encode_decode, reconstruct_decoder=True):
+        encoder_flat, decoder_flat = np.split(encode_decode, [self.states *
+                                                              self.messages])
+        encoder = encoder_flat.reshape(self.states, self.messages)
+        if reconstruct_decoder:
+            decoder = decoder_flat.reshape(self.messages, self.game.acts)
+            return encoder, decoder
+        return encoder
+
 
     def enc_dec_init(self):
         """
@@ -326,40 +357,52 @@ class OptimizeMessageEntropy(RDT):
         decoder = np.ones((self.messages * self.outcomes)) / self.outcomes
         return np.concatenate((encoder, decoder))
 
-    def gen_lin_constraint(self, distortions):
+    def gen_nonlin_constraint(self, distortions):
         """
-        Generate the LinearConstraint object
+        Generate the a list of NonLinearConstraint objects
 
         Parameters
         ----------
         distortions: A list of distortion objectives
         """
+        nonlinear_constraints = [opt.NonlinearConstraint(
+            self.gen_dist_func(matrix), 0,
+            distortion) for matrix, distortion in zip(self.dist_measures,
+                                                      distortions)]
+        return nonlinear_constraints
+
+
+    def gen_lin_constraint(self):
+        """
+        Generate the LinearConstraint object 
+
+        Parameters
+        ----------
+        distortions: A list of probability objectives
+        """
+        prob = self.prob_constraint()
         linear_constraint = opt.LinearConstraint(
-            self.constraint, [0, 0] + [1] * (self.states + self.messages),
-            list(distortions) + [1] * (self.states + self.messages))
+            prob, [1] * (self.states + self.messages),
+            [1] * (self.states + self.messages))
         return linear_constraint
 
-    def lin_constraint(self, dist_measures):
-        """
-        Collate all constraints
-        """
-        distortion = self.dist_constraint(dist_measures)
-        prob = self.prob_constraint()
-        return np.vstack((distortion, prob))
 
-    def dist_constraint(self, dist_measures):
+    def gen_dist_func(self, matrix):
         """
-        Present the distortion constraint (which is linear) the way
-        scipy.optimize expects it
+        Return the function that goes into the NonLinearConstraint objects
         """
-        return np.array([(self.pmf[:, np.newaxis] *
-                          self.dist_tensor[measure]).flatten() for
-                         measure in dist_measures])
+        def dist_func(encoder_decoder):
+            encoder, decoder = self.reconstruct_enc_dec(encoder_decoder)
+            cond = encoder @ decoder
+            dist = self.calc_distortion(cond, matrix)
+            return dist
+        return dist_func
+
 
     def prob_constraint(self):
         """
         Present the constraint that all rows in encoder and decoder be
-        probability vectors 
+        probability vectors
         """
         template_encoder = np.identity(self.states)
         template_decoder = np.identity(self.messages)
