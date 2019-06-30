@@ -184,7 +184,7 @@ class OptimizeRate(RDT):
             self.dist_measures = range(self.dist_tensor.shape[0])
         self.hess = opt.BFGS(exception_strategy='skip_update')
         self.bounds = opt.Bounds(0, 1)
-        self.constraint = self.lin_constraint(self.dist_measures)
+        self.constraint = self.lin_constraint()
         self.default_cond_init = self.cond_init()
 
     def make_calc_RD(self):
@@ -231,22 +231,22 @@ class OptimizeRate(RDT):
                                                  + [1] * self.states)
         return linear_constraint
 
-    def lin_constraint(self, dist_measures):
+    def lin_constraint(self):
         """
         Collate all constraints
         """
-        distortion = self.dist_constraint(dist_measures)
+        distortion = self.dist_constraint()
         prob = self.prob_constraint()
         return sparse.vstack((distortion, prob))
 
-    def dist_constraint(self, dist_measures):
+    def dist_constraint(self):
         """
         Present the distortion constraint (which is linear) the way
         scipy.optimize expects it
         """
         return np.array([(self.pmf[:, np.newaxis] *
                           self.dist_tensor[measure]).flatten() for
-                         measure in dist_measures])
+                         measure in self.dist_measures])
 
     def prob_constraint(self):
         """
@@ -257,6 +257,114 @@ class OptimizeRate(RDT):
         data = np.ones(row_length)
         rows = np.repeat(np.arange(self.states), self.states)
         columns = np.arange(row_length)
+        return sparse.coo_matrix((data, (rows, columns)))
+
+class OptimizeMessages(RDT):
+    """
+    A class to calculate number-of-messges/distortion curves with a scipy
+    optimizer
+    """
+    def __init__(self, game, dist_measures=None, dist_tensor=None, epsilon=1e-4):
+        """
+        Parameters
+        ----------
+
+        dist_measures: A list of integers with the distortions from
+        self.dist_tensor to be considered
+        """
+        RDT.__init__(self, game, dist_tensor, epsilon)
+        self.states = len(self.pmf)
+        self.acts = game.acts
+        if dist_measures:
+            self.dist_measures = dist_measures
+        else:
+            self.dist_measures = range(self.dist_tensor.shape[0])
+        self.hess = opt.BFGS(exception_strategy='skip_update')
+        self.bounds = opt.Bounds(0, 1)
+
+    def make_calc_RD(self):
+        """
+        Return a function that calculates an RD (hyper-)surface using the
+        trust-constr scipy optimizer, for a given list of distortion
+        objectives.
+        """
+        def calc_RD(distortions, messages,
+                    codec_init_func=self.codec_init,
+                    return_obj=False, **kwargs):
+            result = opt.minimize(lambda x: self.rate(x, messages),
+                                  codec_init_func(messages), method="trust-constr",
+                                  jac='2-point', hess=self.hess,
+                                  constraints=[self.gen_lin_constraint(distortions,
+                                                                       messages)],
+                                  bounds=self.bounds, **kwargs)
+            if return_obj:
+                return np.array([result.status, result.fun]), result
+            return np.array([result.status, result.fun])
+        return calc_RD
+
+    def rate(self, codec_flat, messages):
+        """
+        Calculate rate for make_calc_RD()
+        """
+        coder, decoder = np.split(codec_flat, [self.states * messages])
+        cond = coder @ decoder
+        output = self.pmf @ cond
+        return self.calc_rate(cond, output)
+
+    def codec_init(self, messages):
+        """
+        Return an initial conditional matrix
+        """
+        coder_init = np.ones((self.states * messages)) / messages
+        decoder_init = np.ones((messages * self.acts)) / self.acts
+        return np.concatenate((coder_init, decoder_init))
+
+    def gen_lin_constraint(self, distortions, messages):
+        """
+        Generate the LinearConstraint object
+
+        Parameters
+        ----------
+        distortions: A list of distortion objectives
+        """
+        linear_constraint = opt.LinearConstraint(
+            self.lin_constraint(messages), [0] *
+            len(distortions) + [1] * (self.states + messages),
+            list(distortions) + [1] * self.states + messages)
+        return linear_constraint
+
+    def lin_constraint(self, messages):
+        """
+        Collate all constraints
+        """
+        distortion = self.dist_constraint()
+        prob = self.prob_constraint(messages)
+        return sparse.vstack((distortion, prob))
+
+    def dist_constraint(self):
+        """
+        Present the distortion constraint (which is linear) the way
+        scipy.optimize expects it
+        """
+        return np.array([(self.pmf[:, np.newaxis] *
+                          self.dist_tensor[measure]).flatten() for
+                         measure in self.dist_measures])
+
+    def prob_constraint(self, messages): # Luego seguimos
+        """
+	Present the constraint that all rows in cond be probability vectors. We
+        use a COO sparse matrix
+	"""
+        data = np.ones(messages * (self.states + self.acts)) # this is the
+            # number of elements in the coder and decoder matrices
+        rows_coder = np.repeat(np.arange(self.states), messages)
+        columns_coder = np.arange(self.states * messages)
+        rows_decoder = np.repeat(
+            np.arange(messages), self.acts) + self.states
+        columns_decoder = np.arange(
+            messages * self.acts) + self.states * messages
+        rows = np.concatenate((rows_coder, rows_decoder))
+        columns = np.concatenate((columns_coder, columns_decoder))
         return sparse.coo_matrix((data, (rows, columns)))
 
 class OptimizeMessageEntropy(RDT):
@@ -359,7 +467,7 @@ class OptimizeMessageEntropy(RDT):
 
     def gen_nonlin_constraint(self, distortions):
         """
-        Generate the a list of NonLinearConstraint objects
+        Generate a list of NonLinearConstraint objects
 
         Parameters
         ----------
