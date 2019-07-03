@@ -342,7 +342,9 @@ class OptimizeMessages(RDT):
         Calculate the distortion for a given channel (individuated by the
         conditional matrix in <cond>), for a certain slice of self.dist_tensor
         """
-        coder, decoder = np.split(codec_flat, [self.states * messages])
+        coder_flat, decoder_flat = np.split(codec_flat, [self.states * messages])
+        coder = coder_flat.reshape(self.states, messages)
+        decoder = decoder_flat.reshape(messages, self.acts)
         cond = coder @ decoder
         return np.matmul(self.pmf, (cond * self.dist_tensor[matrix])).sum()
 
