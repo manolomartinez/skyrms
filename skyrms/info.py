@@ -6,12 +6,14 @@ import numpy as np
 import scipy.optimize as opt
 from scipy import sparse
 
+
 class Information:
     """
     Calculate information-theoretic quantities between strats. It expects a
     game, as created by game.Chance or game.NonChance, a sender strategy, and a
     receiver strategy
     """
+
     def __init__(self, game, sender, receiver):
         self.sender = sender
         self.receiver = receiver
@@ -35,8 +37,7 @@ class Information:
     def joint_messages_acts(self):
         joint_s_m = self.joint_states_messages()
         uncondmessages = sum(joint_s_m)
-        return from_conditional_to_joint(uncondmessages,
-                                         self.acts_cond_on_msg)
+        return from_conditional_to_joint(uncondmessages, self.acts_cond_on_msg)
 
     def joint_states_acts(self):
         joint_s_m = self.joint_states_messages()
@@ -66,6 +67,7 @@ class RDT:
     Calculate the rate-distortion function for a game and any number of distortion
     measures
     """
+
     def __init__(self, game, dist_tensor=None, epsilon=0.001):
         """
         Parameters
@@ -90,8 +92,10 @@ class RDT:
         """
         Return normalize_distortion() for sender and receiver payoffs
         """
-        return np.array([normalize_distortion(self.game.sender_payoff_matrix),
-                         normalize_distortion(self.game.receiver_payoff_matrix)])
+        return np.array([
+            normalize_distortion(self.game.sender_payoff_matrix),
+            normalize_distortion(self.game.receiver_payoff_matrix)
+        ])
 
     def blahut(self, lambda_, max_rounds=100, return_cond=False):
         """
@@ -114,8 +118,9 @@ class RDT:
             rounds = rounds + 1
             if rounds == max_rounds:
                 print("Max rounds for {}".format(lambda_))
-        distortion = [self.calc_distortion(cond, matrix) for matrix in
-                      range(params)]
+        distortion = [
+            self.calc_distortion(cond, matrix) for matrix in range(params)
+        ]
         if return_cond:
             return_tuple = (rate, *distortion, cond)
         else:
@@ -158,8 +163,9 @@ class RDT:
         """
         output = self.pmf @ cond
         rate = self.calc_rate(cond, output)
-        distortion = [self.calc_distortion(cond, matrix) for matrix in
-                      dist_measures]
+        distortion = [
+            self.calc_distortion(cond, matrix) for matrix in dist_measures
+        ]
         return (rate, *distortion)
 
 
@@ -167,7 +173,12 @@ class OptimizeRate(RDT):
     """
     A class to calculate rate-distortion surface with a scipy optimizer
     """
-    def __init__(self, game, dist_measures=None, dist_tensor=None, epsilon=1e-4):
+
+    def __init__(self,
+                 game,
+                 dist_measures=None,
+                 dist_tensor=None,
+                 epsilon=1e-4):
         """
         Parameters
         ----------
@@ -193,15 +204,24 @@ class OptimizeRate(RDT):
         trust-constr scipy optimizer, for a given list of distortion
         objectives.
         """
-        def calc_RD(distortions, cond_init=self.default_cond_init,
-                    return_obj=False, **kwargs):
-            result = opt.minimize(self.rate, cond_init, method="trust-constr",
-                                  jac='2-point', hess=self.hess,
-                                  constraints=[self.gen_lin_constraint(distortions)],
-                                  bounds=self.bounds, **kwargs)
+
+        def calc_RD(distortions,
+                    cond_init=self.default_cond_init,
+                    return_obj=False,
+                    **kwargs):
+            result = opt.minimize(
+                self.rate,
+                cond_init,
+                method="trust-constr",
+                jac='2-point',
+                hess=self.hess,
+                constraints=[self.gen_lin_constraint(distortions)],
+                bounds=self.bounds,
+                **kwargs)
             if return_obj:
                 return np.array([result.status, result.fun]), result
             return np.array([result.status, result.fun])
+
         return calc_RD
 
     def rate(self, cond_flat):
@@ -226,9 +246,9 @@ class OptimizeRate(RDT):
         ----------
         distortions: A list of distortion objectives
         """
-        linear_constraint = opt.LinearConstraint(self.constraint, [0, 0] + [1] *
-                                                 self.states, list(distortions)
-                                                 + [1] * self.states)
+        linear_constraint = opt.LinearConstraint(
+            self.constraint, [0, 0] + [1] * self.states,
+            list(distortions) + [1] * self.states)
         return linear_constraint
 
     def lin_constraint(self):
@@ -244,9 +264,10 @@ class OptimizeRate(RDT):
         Present the distortion constraint (which is linear) the way
         scipy.optimize expects it
         """
-        return np.array([(self.pmf[:, np.newaxis] *
-                          self.dist_tensor[measure]).flatten() for
-                         measure in self.dist_measures])
+        return np.array([
+            (self.pmf[:, np.newaxis] * self.dist_tensor[measure]).flatten()
+            for measure in self.dist_measures
+        ])
 
     def prob_constraint(self):
         """
@@ -259,12 +280,18 @@ class OptimizeRate(RDT):
         columns = np.arange(row_length)
         return sparse.coo_matrix((data, (rows, columns)))
 
+
 class OptimizeMessages(RDT):
     """
     A class to calculate number-of-messges/distortion curves with a scipy
     optimizer
     """
-    def __init__(self, game, dist_measures=None, dist_tensor=None, epsilon=1e-4):
+
+    def __init__(self,
+                 game,
+                 dist_measures=None,
+                 dist_tensor=None,
+                 epsilon=1e-4):
         """
         Parameters
         ----------
@@ -282,34 +309,42 @@ class OptimizeMessages(RDT):
         self.hess = opt.BFGS(exception_strategy='skip_update')
         self.bounds = opt.Bounds(0, 1)
 
-    def make_calc_RD(self):
+    def make_calc_MD(self):
         """
-        Return a function that calculates an RD (hyper-)surface using the
-        trust-constr scipy optimizer, for a given list of distortion
-        objectives.
+        Return a function that calculates the minimum distortion attainable for
+        a certain number of messages, using a trust-constr scipy optimizer.
+        Right now it only works for one distortion measure.
+        <distortion> is the distortion matrix in <dist_tensor> that we should
+        care about.
         """
-        def calc_RD(distortions, messages,
+
+        def calc_MD(messages,
+                    distortion,
                     codec_init_func=self.codec_init,
-                    return_obj=False, **kwargs):
-            result = opt.minimize(lambda x: self.rate(x, messages),
-                                  codec_init_func(messages), method="trust-constr",
-                                  jac='2-point', hess=self.hess,
-                                  constraints=[self.gen_lin_constraint(distortions,
-                                                                       messages)],
-                                  bounds=self.bounds, **kwargs)
+                    return_obj=False,
+                    **kwargs):
+            result = opt.minimize(
+                lambda x: self.distortion(x, messages, distortion),
+                codec_init_func(messages),
+                method="trust-constr",
+                jac='2-point',
+                hess=self.hess,
+                constraints=[self.gen_lin_constraint(messages)],
+                bounds=self.bounds,
+                **kwargs)
             if return_obj:
                 return np.array([result.status, result.fun]), result
             return np.array([result.status, result.fun])
-        return calc_RD
+        return calc_MD
 
-    def rate(self, codec_flat, messages):
+    def distortion(self, codec_flat, messages, matrix):
         """
-        Calculate rate for make_calc_RD()
+        Calculate the distortion for a given channel (individuated by the
+        conditional matrix in <cond>), for a certain slice of self.dist_tensor
         """
         coder, decoder = np.split(codec_flat, [self.states * messages])
         cond = coder @ decoder
-        output = self.pmf @ cond
-        return self.calc_rate(cond, output)
+        return np.matmul(self.pmf, (cond * self.dist_tensor[matrix])).sum()
 
     def codec_init(self, messages):
         """
@@ -319,7 +354,7 @@ class OptimizeMessages(RDT):
         decoder_init = np.ones((messages * self.acts)) / self.acts
         return np.concatenate((coder_init, decoder_init))
 
-    def gen_lin_constraint(self, distortions, messages):
+    def gen_lin_constraint(self, messages):
         """
         Generate the LinearConstraint object
 
@@ -327,53 +362,41 @@ class OptimizeMessages(RDT):
         ----------
         distortions: A list of distortion objectives
         """
+        prob_constraint = self.prob_constraint(messages)
         linear_constraint = opt.LinearConstraint(
-            self.lin_constraint(messages), [0] *
-            len(distortions) + [1] * (self.states + messages),
-            list(distortions) + [1] * self.states + messages)
+            prob_constraint, [0] * prob_constraint.shape[0],
+            [1] * prob_constraint.shape[0])
         return linear_constraint
 
-    def lin_constraint(self, messages):
-        """
-        Collate all constraints
-        """
-        distortion = self.dist_constraint()
-        prob = self.prob_constraint(messages)
-        return sparse.vstack((distortion, prob))
-
-    def dist_constraint(self):
-        """
-        Present the distortion constraint (which is linear) the way
-        scipy.optimize expects it
-        """
-        return np.array([(self.pmf[:, np.newaxis] *
-                          self.dist_tensor[measure]).flatten() for
-                         measure in self.dist_measures])
-
-    def prob_constraint(self, messages): # Luego seguimos
+    def prob_constraint(self, messages):
         """
 	Present the constraint that all rows in cond be probability vectors. We
         use a COO sparse matrix
 	"""
-        data = np.ones(messages * (self.states + self.acts)) # this is the
-            # number of elements in the coder and decoder matrices
+        data = np.ones(messages * (self.states + self.acts))  # this is the
+        # number of elements in the coder and decoder matrices
         rows_coder = np.repeat(np.arange(self.states), messages)
         columns_coder = np.arange(self.states * messages)
-        rows_decoder = np.repeat(
-            np.arange(messages), self.acts) + self.states
+        rows_decoder = np.repeat(np.arange(messages), self.acts) + self.states
         columns_decoder = np.arange(
             messages * self.acts) + self.states * messages
         rows = np.concatenate((rows_coder, rows_decoder))
         columns = np.concatenate((columns_coder, columns_decoder))
         return sparse.coo_matrix((data, (rows, columns)))
 
+
 class OptimizeMessageEntropy(RDT):
     """
     A class to calculate rate-distortion (where rate is actually the entropy of
     messages= with a scipy optimizer
     """
-    def __init__(self, game, dist_measures=None, dist_tensor=None,
-                 messages=None, epsilon=1e-4):
+
+    def __init__(self,
+                 game,
+                 dist_measures=None,
+                 dist_tensor=None,
+                 messages=None,
+                 epsilon=1e-4):
         """
         Parameters
         ----------
@@ -397,7 +420,6 @@ class OptimizeMessageEntropy(RDT):
         self.bounds = opt.Bounds(0, 1)
         self.default_enc_dec_init = self.enc_dec_init()
 
-
     def make_calc_RD(self):
         """
         Return a function that calculates an RD (hyper-)surface using the
@@ -405,18 +427,23 @@ class OptimizeMessageEntropy(RDT):
         objectives.
         """
 
-        def calc_RD(distortions, enc_dec_init=self.default_enc_dec_init, return_obj=False):
-            result = opt.minimize(self.message_entropy, enc_dec_init, method="trust-constr",
-                                  jac='2-point', hess=self.hess,
-                                  constraints=([self.gen_lin_constraint()] +
-                                               self.gen_nonlin_constraint(distortions)),
-                                  bounds=self.bounds)
+        def calc_RD(distortions,
+                    enc_dec_init=self.default_enc_dec_init,
+                    return_obj=False):
+            result = opt.minimize(
+                self.message_entropy,
+                enc_dec_init,
+                method="trust-constr",
+                jac='2-point',
+                hess=self.hess,
+                constraints=([self.gen_lin_constraint()] +
+                             self.gen_nonlin_constraint(distortions)),
+                bounds=self.bounds)
             if return_obj:
                 return np.array([result.status, result.fun]), result
             return np.array([result.status, result.fun])
 
         return calc_RD
-
 
     def minimize_distortion(self, matrix):
         """
@@ -426,8 +453,11 @@ class OptimizeMessageEntropy(RDT):
         """
 
         def min_dist(enc_dec_init=self.default_enc_dec_init, return_obj=False):
-            result = opt.minimize(self.gen_dist_func(matrix), enc_dec_init, method="trust-constr",
-                                  jac='2-point', hess=self.hess,
+            result = opt.minimize(self.gen_dist_func(matrix),
+                                  enc_dec_init,
+                                  method="trust-constr",
+                                  jac='2-point',
+                                  hess=self.hess,
                                   constraints=self.gen_lin_constraint(),
                                   bounds=self.bounds)
             if return_obj:
@@ -446,16 +476,14 @@ class OptimizeMessageEntropy(RDT):
         message_probs = self.pmf @ encoder
         return entropy(message_probs)
 
-
     def reconstruct_enc_dec(self, encode_decode, reconstruct_decoder=True):
-        encoder_flat, decoder_flat = np.split(encode_decode, [self.states *
-                                                              self.messages])
+        encoder_flat, decoder_flat = np.split(encode_decode,
+                                              [self.states * self.messages])
         encoder = encoder_flat.reshape(self.states, self.messages)
         if reconstruct_decoder:
             decoder = decoder_flat.reshape(self.messages, self.game.acts)
             return encoder, decoder
         return encoder
-
 
     def enc_dec_init(self):
         """
@@ -473,12 +501,11 @@ class OptimizeMessageEntropy(RDT):
         ----------
         distortions: A list of distortion objectives
         """
-        nonlinear_constraints = [opt.NonlinearConstraint(
-            self.gen_dist_func(matrix), 0,
-            distortion) for matrix, distortion in zip(self.dist_measures,
-                                                      distortions)]
+        nonlinear_constraints = [
+            opt.NonlinearConstraint(self.gen_dist_func(matrix), 0, distortion)
+            for matrix, distortion in zip(self.dist_measures, distortions)
+        ]
         return nonlinear_constraints
-
 
     def gen_lin_constraint(self):
         """
@@ -494,18 +521,18 @@ class OptimizeMessageEntropy(RDT):
             [1] * (self.states + self.messages))
         return linear_constraint
 
-
     def gen_dist_func(self, matrix):
         """
         Return the function that goes into the NonLinearConstraint objects
         """
+
         def dist_func(encoder_decoder):
             encoder, decoder = self.reconstruct_enc_dec(encoder_decoder)
             cond = encoder @ decoder
             dist = self.calc_distortion(cond, matrix)
             return dist
-        return dist_func
 
+        return dist_func
 
     def prob_constraint(self):
         """
@@ -516,10 +543,8 @@ class OptimizeMessageEntropy(RDT):
         template_decoder = np.identity(self.messages)
         upper_left = np.repeat(template_encoder, self.messages).reshape(
             self.states, self.states * self.messages)
-        lower_right = np.repeat(template_decoder,
-                                self.outcomes).reshape(self.messages,
-                                                       self.messages *
-                                                       self.outcomes)
+        lower_right = np.repeat(template_decoder, self.outcomes).reshape(
+            self.messages, self.messages * self.outcomes)
         upper_right = np.zeros_like(upper_left)
         lower_left = np.zeros_like(lower_right)
         upper = np.hstack((upper_left, upper_right))
@@ -532,6 +557,7 @@ class Shea:
     Calculate functional content vectors as presented in Shea, Godfrey-Smith
     andand Cao 2017.
     """
+
     def __init__(self, game):
         """
         Parameters
@@ -549,7 +575,8 @@ class Shea:
         (this is not decided by Shea et al.; see fn.14)
         """
         vec_expected = np.vectorize(self.expected_for_act)
-        payoffs = np.apply_along_axis(vec_expected, 0, np.arange(self.game.acts)).T
+        payoffs = np.apply_along_axis(vec_expected, 0,
+                                      np.arange(self.game.acts)).T
         maxreceiver = np.max(payoffs[:, 1])
         sender = payoffs[:, 0][payoffs[:, 1] == maxreceiver]
         return np.max(sender), maxreceiver
@@ -664,25 +691,25 @@ class Shea:
         """
         Calculate the functional content from the perspective of the sender
         """
-        return self.functional_content(self.calc_entries_sender(sender_strat,
-                                                                receiver_strat),
-                                       self.calc_condition_sender(receiver_strat))
+        return self.functional_content(
+            self.calc_entries_sender(sender_strat, receiver_strat),
+            self.calc_condition_sender(receiver_strat))
 
     def functional_content_receiver(self, sender_strat, receiver_strat):
         """
         Calculate the functional content from the perspective of the receiver
         """
-        return self.functional_content(self.calc_entries_receiver(sender_strat,
-                                                                  receiver_strat),
-                                       self.calc_condition_receiver(receiver_strat))
+        return self.functional_content(
+            self.calc_entries_receiver(sender_strat, receiver_strat),
+            self.calc_condition_receiver(receiver_strat))
 
     def functional_content_dmin(self, sender_strat, receiver_strat):
         """
         Calculate the functional content from the perspective of dmin
         """
-        return self.functional_content(self.calc_entries_dmin(sender_strat,
-                                                              receiver_strat),
-                                       self.calc_condition_common(receiver_strat))
+        return self.functional_content(
+            self.calc_entries_dmin(sender_strat, receiver_strat),
+            self.calc_condition_common(receiver_strat))
 
 
 def conditional_entropy(conds, unconds):
@@ -808,4 +835,7 @@ def normalize_distortion(matrix):
     minmatrix = np.min(matrix)
     numerator = maxmatrix - matrix
     denominator = maxmatrix - minmatrix
-    return np.divide(numerator, denominator, out=np.zeros_like(matrix), where=denominator!=0)
+    return np.divide(numerator,
+                     denominator,
+                     out=np.zeros_like(matrix),
+                     where=denominator != 0)
