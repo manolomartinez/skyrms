@@ -348,6 +348,16 @@ class OptimizeMessages(RDT):
         cond = coder @ decoder
         return np.matmul(self.pmf, (cond * self.dist_tensor[matrix])).sum()
 
+    def codec_init_random(self, messages):
+        """
+        Return an initial conditional matrix
+        """
+        coder_init = np.random.rand(self.states * messages)
+        coder_init = (coder_init / coder_init.sum(1)[:, None]).flatten()
+        decoder_init = np.random.rand(messages * self.acts)
+        decoder_init = (decoder_init / decoder_init.sum(1)[:, None]).flatten()
+        return np.concatenate((coder_init, decoder_init))
+
     def codec_init(self, messages):
         """
         Return an initial conditional matrix
