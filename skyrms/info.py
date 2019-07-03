@@ -366,7 +366,7 @@ class OptimizeMessages(RDT):
         """
         prob_constraint = self.prob_constraint(messages)
         linear_constraint = opt.LinearConstraint(
-            prob_constraint, [0] * prob_constraint.shape[0],
+            prob_constraint, [1] * prob_constraint.shape[0],
             [1] * prob_constraint.shape[0])
         return linear_constraint
 
